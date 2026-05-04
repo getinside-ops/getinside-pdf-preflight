@@ -36,6 +36,18 @@ CAPITAL_RE = re.compile(
 
 POSTAL_CODE_RE = re.compile(r"\b\d{5}\b")
 
+# Matches a French street address: number + street type + name + postal code + city.
+# Works on normalized text (no accents, lowercase).
+# City capture stops at " - " separator (used between legal mentions in OCR text).
+ADDRESS_RE = re.compile(
+    r"\d+\s*,?\s*"
+    r"(?:rue|avenue|av\.?\s|boulevard|bd\.?\s|place|impasse|allee|chemin|route|quai|square|cours|voie)\b"
+    r"(?:(?!\s+-\s).){3,60}?"
+    r"\b\d{5}\b"
+    r"\s+(?:[\w](?:(?!\s+-\s)[\w\s]){0,25})",
+    re.IGNORECASE,
+)
+
 
 def check_advertiser(all_text: str) -> list[CheckResult]:
     results: list[CheckResult] = []
@@ -110,12 +122,28 @@ def check_advertiser(all_text: str) -> list[CheckResult]:
         )
 
     # Address (postal code proxy)
-    if POSTAL_CODE_RE.search(all_text):
+    addr_match = ADDRESS_RE.search(norm)
+    if addr_match:
+        address = addr_match.group(0).strip().rstrip(" -,")
+        address = re.sub(r"\s+france\s*$", "", address, flags=re.IGNORECASE).rstrip(" ,")
         results.append(
             CheckResult(
                 check_name="advertiser",
                 severity=Severity.INFO,
-                message="Code postal détecté — adresse du siège présumée présente.",
+                message=f"Adresse détectée : « {address} »",
+            )
+        )
+    elif POSTAL_CODE_RE.search(norm):
+        # Fallback: code postal trouvé mais motif d'adresse non reconnu
+        postal_match = POSTAL_CODE_RE.search(norm)
+        start = max(0, postal_match.start() - 60)
+        end = min(len(norm), postal_match.end() + 30)
+        snippet = norm[start:end].strip()
+        results.append(
+            CheckResult(
+                check_name="advertiser",
+                severity=Severity.INFO,
+                message=f"Adresse détectée : « {snippet} »",
             )
         )
     else:
