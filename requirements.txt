@@ -1,0 +1,10 @@
+streamlit>=1.57
+pymupdf>=1.27
+pikepdf>=10.5
+pillow>=12.0
+pytesseract>=0.3.13
+opencv-python-headless>=4.13
+imagehash>=4.3
+rapidfuzz>=3.14
+dateparser>=1.4
+numpy>=2.0

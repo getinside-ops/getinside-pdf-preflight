@@ -1,0 +1,90 @@
+"""Pipeline orchestrator.
+
+Holds the user-supplied form context and runs every check in sequence,
+returning a flat list of `CheckResult`s. The Streamlit layer groups
+them by severity for display.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
+
+from preflight.checks import CheckResult, Severity
+from preflight.checks.advertiser import check_advertiser
+from preflight.checks.colorspace import check_colorspace
+from preflight.checks.dimensions import check_dimensions
+from preflight.checks.industry import check_industry
+from preflight.checks.logos import check_logos
+from preflight.checks.offer import check_offer
+from preflight.checks.printer import check_printer
+from preflight.checks.qrcode import check_qr
+from preflight.document import Document
+from preflight.extract import all_text
+from preflight.formats import FormatSpec
+from preflight.logos import LogoLibrary
+
+PrintMethod = Literal["Imprimé par getinside", "Imprimé par la marque"]
+
+LOGO_LIBRARY_ROOT = Path(__file__).resolve().parent.parent / "assets" / "logos"
+
+
+@dataclass
+class CheckContext:
+    format_spec: FormatSpec
+    industry: str
+    print_method: PrintMethod
+
+
+def run_all_checks(
+    document: Document,
+    context: CheckContext,
+    *,
+    logo_library: LogoLibrary | None = None,
+) -> list[CheckResult]:
+    if logo_library is None:
+        logo_library = LogoLibrary(LOGO_LIBRARY_ROOT)
+
+    results: list[CheckResult] = []
+    results.extend(check_dimensions(document, context.format_spec))
+    results.extend(check_colorspace(document))
+    results.extend(check_qr(document))
+    results.extend(
+        check_logos(document, logo_library, context.print_method)
+    )
+
+    document_text = all_text(document)
+
+    results.extend(check_advertiser(document_text))
+    results.extend(check_offer(document_text))
+    results.extend(check_printer(document_text, context.print_method))
+    results.extend(check_industry(document_text, context.industry))
+
+    return results
+
+
+def summarize(results: list[CheckResult]) -> dict[str, int]:
+    counts = {Severity.ERROR: 0, Severity.WARNING: 0, Severity.INFO: 0}
+    for r in results:
+        counts[r.severity] += 1
+    return {s.value: c for s, c in counts.items()}
+
+
+def overall_verdict(results: list[CheckResult]) -> Literal["pass", "review", "fail"]:
+    counts = summarize(results)
+    if counts.get(Severity.ERROR.value, 0) > 0:
+        return "fail"
+    if counts.get(Severity.WARNING.value, 0) > 0:
+        return "review"
+    return "pass"
+
+
+__all__ = [
+    "CheckContext",
+    "LOGO_LIBRARY_ROOT",
+    "PrintMethod",
+    "overall_verdict",
+    "run_all_checks",
+    "summarize",
+]
