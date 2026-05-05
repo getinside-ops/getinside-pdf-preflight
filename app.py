@@ -286,7 +286,7 @@ if run_button and uploaded:
     st.divider()
 
     # 5. Debug section (discrete button + modal at bottom)
-    if st.button("🔧 Détails OCR", key="debug_button", help="Afficher les détails techniques (OCR)"):
+    if st.button(_lucide_icon("info"), key="debug_button", help="Afficher les détails techniques (OCR)"):
         st.session_state["show_debug"] = True
 
     if st.session_state.get("show_debug", False):

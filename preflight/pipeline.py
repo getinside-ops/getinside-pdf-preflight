@@ -13,12 +13,17 @@ from typing import Literal
 
 from preflight.checks import CheckResult, Severity
 from preflight.checks.advertiser import check_advertiser
+from preflight.checks.bleed import check_bleed
 from preflight.checks.colorspace import check_colorspace
+from preflight.checks.contrast import check_contrast
 from preflight.checks.dimensions import check_dimensions
+from preflight.checks.image_resolution import check_image_resolution
 from preflight.checks.industry import check_industry
 from preflight.checks.logos import check_logos
 from preflight.checks.offer import check_offer
 from preflight.checks.printer import check_printer
+from preflight.checks.qrcode import check_qr
+from preflight.checks.transparency import check_transparency
 from preflight.checks.qrcode import check_qr
 from preflight.document import Document
 from preflight.extract import OCR_SETTINGS, OcrSettings, PageText, all_text, extract_document_text
@@ -55,8 +60,12 @@ def run_all_checks(
 
     results: list[CheckResult] = []
     results.extend(check_dimensions(document, context.format_spec))
+    results.extend(check_bleed(document))
     results.extend(check_colorspace(document))
+    results.extend(check_image_resolution(document))
+    results.extend(check_transparency(document))
     results.extend(check_qr(document))
+    results.extend(check_contrast(document))
     results.extend(
         check_logos(document, logo_library, context.print_method)
     )

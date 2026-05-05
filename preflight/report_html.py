@@ -8,12 +8,16 @@ from preflight.pipeline import CheckContext
 
 _CHECK_META: dict[str, tuple[str, str]] = {
     "dimensions": ("", "DIMENSIONS"),
+    "bleed": ("", "FOND PERDU"),
     "colorspace":  ("", "COULEURS"),
+    "transparency": ("", "TRANSPARENCE"),
+    "image_resolution": ("", "RÉSOLUTION"),
     "qrcode":      ("", "QR CODE"),
     "logos":       ("", "LOGOS"),
     "advertiser":  ("", "ANNONCEUR"),
     "offer":       ("", "OFFRE"),
     "printer":     ("", "IMPRIMEUR"),
+    "contrast":    ("", "CONTRASTE"),
     "industry":    ("", "RÉGLEMENTAIRE"),
 }
 _CHECK_ORDER = list(_CHECK_META.keys())
