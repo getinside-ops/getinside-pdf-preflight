@@ -32,16 +32,17 @@ _SEV_COLORS: dict[Severity, tuple[str, str]] = {
     Severity.INFO:    ("#6b7280", "#9ca3af"),
 }
 
-_SEV_BORDER: dict[Severity, str] = {
-    Severity.ERROR:   "#dc2626",
-    Severity.WARNING: "#d97706",
-    Severity.INFO:    "#16a34a",
-}
-
 _SEV_PILL: dict[Severity, tuple[str, str]] = {
     Severity.ERROR:   ("#fee2e2", "#dc2626"),
     Severity.WARNING: ("#fef3c7", "#92400e"),
     Severity.INFO:    ("#dcfce7", "#166534"),
+}
+
+_SEV_ICON: dict[Severity, tuple[str, str, str, str]] = {
+    # (bg, border, text_color, char)
+    Severity.ERROR:   ("#fef2f2", "#fca5a5", "#dc2626", "✕"),
+    Severity.WARNING: ("#fffbeb", "#fcd34d", "#d97706", "!"),
+    Severity.INFO:    ("#f0fdf4", "#86efac", "#16a34a", "✓"),
 }
 
 
@@ -109,7 +110,7 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
         e_count = sum(1 for r in items if r.severity is Severity.ERROR)
         w_count = sum(1 for r in items if r.severity is Severity.WARNING)
 
-        border_color = _SEV_BORDER[worst]
+        icon_bg, icon_border, icon_color, icon_char = _SEV_ICON[worst]
         pill_bg, pill_fg = _SEV_PILL[worst]
         open_attr = " open" if worst is not Severity.INFO else ""
 
@@ -120,14 +121,20 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
         else:
             pill_text = "OK"
 
+        icon_html = (
+            f"<span style='width:22px;height:22px;border-radius:6px;"
+            f"background:{icon_bg};border:1.5px solid {icon_border};"
+            f"display:inline-flex;align-items:center;justify-content:center;"
+            f"font-size:12px;color:{icon_color};flex-shrink:0'>{icon_char}</span>"
+        )
+
         parts.append(
-            f"<div style='margin-bottom:8px;border:1px solid #e5e7eb;"
-            f"border-left:3px solid {border_color};border-radius:8px;overflow:hidden'>"
+            f"<div style='margin-bottom:8px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden'>"
             f"<details{open_attr}>"
             f"<summary style='cursor:pointer;padding:10px 14px;background:#f9fafb;"
             f"font-size:13px;font-weight:600;color:#111827;list-style:none;"
             f"display:flex;align-items:center;justify-content:space-between'>"
-            f"<span>{escape(label)}</span>"
+            f"<span style='display:flex;align-items:center;gap:8px'>{icon_html}{escape(label)}</span>"
             f"<span style='background:{pill_bg};color:{pill_fg};font-size:11px;"
             f"font-weight:600;padding:2px 8px;border-radius:4px'>{pill_text}</span>"
             f"</summary>"

@@ -109,22 +109,31 @@ def test_ok_card_is_collapsed_by_default(ctx):
     assert "<details open>" not in html
 
 
-def test_error_card_has_red_left_border(ctx):
+def test_error_card_has_red_icon(ctx):
     results = [_r("dimensions", Severity.ERROR, "Taille incorrecte")]
     html = build_html_report(results, ctx)
-    assert "border-left:3px solid #dc2626" in html
+    # Check for error icon styling: red bg, border, and text
+    assert "#fef2f2" in html  # error icon bg
+    assert "#fca5a5" in html  # error icon border
+    assert "✕" in html  # error icon char
 
 
-def test_warning_card_has_amber_left_border(ctx):
+def test_warning_card_has_amber_icon(ctx):
     results = [_r("colorspace", Severity.WARNING, "Couleur non CMJN")]
     html = build_html_report(results, ctx)
-    assert "border-left:3px solid #d97706" in html
+    # Check for warning icon styling: amber bg, border, and text
+    assert "#fffbeb" in html  # warning icon bg
+    assert "#fcd34d" in html  # warning icon border
+    assert "!" in html  # warning icon char
 
 
-def test_ok_card_has_green_left_border(ctx):
+def test_ok_card_has_green_icon(ctx):
     results = [_r("logos", Severity.INFO, "Logo détecté")]
     html = build_html_report(results, ctx)
-    assert "border-left:3px solid #16a34a" in html
+    # Check for info icon styling: green bg, border, and text
+    assert "#f0fdf4" in html  # info icon bg
+    assert "#86efac" in html  # info icon border
+    assert "✓" in html  # info icon char
 
 
 def test_warning_card_is_open_by_default(ctx):
