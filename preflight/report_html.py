@@ -119,12 +119,22 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
                     f"padding:1px 5px;border-radius:3px;margin-right:4px'>[p.{r.page + 1}]</span>"
                 )
             formatted_msg = _format_message(r)
+            detail_lines = ""
+            if r.details:
+                for k, v in r.details.items():
+                    if k == "page":
+                        continue
+                    detail_lines += (
+                        f"<div style='padding-left:28px;font-size:11.5px;color:#9ca3af'>"
+                        f"{escape(k)}: {escape(_fmt_detail_value(v))}</div>"
+                    )
             parts.append(
                 f"<div style='padding-left:16px;font-size:12.5px;line-height:1.6'>"
                 f"<span style='color:{dot_color}'>·</span> "
                 f"{page_badge}"
                 f"<span style='color:{text_color}'>{escape(formatted_msg)}</span>"
                 f"</div>"
+                f"{detail_lines}"
             )
 
         parts.append("</div>")
