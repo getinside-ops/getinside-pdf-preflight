@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from preflight.document import Document, DocumentError, UploadedFile
@@ -174,10 +176,10 @@ def _render_metadata(document: Document) -> None:
 
     if document.kind == "pdf":
         if meta.pdf_version:
-            parts.append(f"<span style='color:#374151'>📄 {meta.pdf_version}</span>")
+            parts.append(f"<span style='color:#374151'>📄 {escape(meta.pdf_version)}</span>")
 
         if meta.pdf_x:
-            parts.append(f"<span style='color:#16a34a;font-weight:600'>✅ {meta.pdf_x}</span>")
+            parts.append(f"<span style='color:#16a34a;font-weight:600'>✅ {escape(meta.pdf_x)}</span>")
         else:
             parts.append("<span style='color:#d97706;font-weight:600'>⚠️ Non PDF/X</span>")
 
@@ -185,21 +187,21 @@ def _render_metadata(document: Document) -> None:
         if software_name:
             if flag == "suspicious":
                 parts.append(
-                    f"<span style='color:#d97706;font-weight:600'>⚠️ {software_name}</span>"
+                    f"<span style='color:#d97706;font-weight:600'>⚠️ {escape(software_name)}</span>"
                 )
             else:
-                parts.append(f"<span style='color:#6b7280'>✏️ {software_name}</span>")
+                parts.append(f"<span style='color:#6b7280'>✏️ {escape(software_name)}</span>")
 
         if meta.creation_date:
-            parts.append(f"<span style='color:#6b7280'>📅 {meta.creation_date}</span>")
+            parts.append(f"<span style='color:#6b7280'>📅 {escape(meta.creation_date)}</span>")
 
     else:  # image
         if meta.file_format:
-            parts.append(f"<span style='color:#374151'>📄 {meta.file_format}</span>")
+            parts.append(f"<span style='color:#374151'>📄 {escape(meta.file_format)}</span>")
         if meta.color_mode:
-            parts.append(f"<span style='color:#374151'>🎨 {meta.color_mode}</span>")
+            parts.append(f"<span style='color:#374151'>🎨 {escape(meta.color_mode)}</span>")
         if meta.dpi:
-            parts.append(f"<span style='color:#374151'>🖨️ {meta.dpi} DPI</span>")
+            parts.append(f"<span style='color:#374151'>🖨️ {escape(meta.dpi)} DPI</span>")
 
     if not parts:
         return
