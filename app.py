@@ -203,6 +203,10 @@ if run_button and uploaded:
             document, context, logo_library=library
         )
 
+    st.session_state["results"] = results
+    st.session_state["extraction_info"] = extraction_info
+    st.session_state["context"] = context
+
     # 1. Preview at top, always visible, small thumbnails
     n_pages = len(document.pages)
     thumb_cols = st.columns(n_pages + (4 - n_pages))  # pad so thumbs stay narrow
@@ -212,8 +216,24 @@ if run_button and uploaded:
             try:
                 preview = page.render(dpi=72) if page.source == "pdf" else page.render()
                 st.image(preview, use_container_width=True)
+                if st.button("🔍 Agrandir", key=f"view_page_{page.index}"):
+                    st.session_state[f"show_page_{page.index}"] = True
             except Exception as exc:  # pragma: no cover
                 st.caption(f"Aperçu indisponible : {exc}")
+
+    # Handle full-size modal views (check all page indices)
+    for page_idx in range(n_pages):
+        if st.session_state.get(f"show_page_{page_idx}", False):
+            with st.dialog(f"Page {page_idx + 1}"):
+                try:
+                    page = document.pages[page_idx]
+                    full_img = page.render(dpi=300)
+                    st.image(full_img, use_container_width=True)
+                except Exception as exc:
+                    st.error(f"Impossible d'afficher : {exc}")
+                if st.button("Fermer", key=f"close_page_{page_idx}"):
+                    st.session_state[f"show_page_{page_idx}"] = False
+                    st.rerun()
 
     # 2. Key info banner (filename, URL, promo code, metadata)
     _render_key_info_banner(doc_name, results, document)
@@ -237,38 +257,43 @@ if run_button and uploaded:
     # 4. HTML report
     _render_html_report(results, context)
 
-    # 5. Debug section (discrete button + modal)
-    debug_key = f"debug_modal_{len(results)}"
-    if st.button("🔧", key=debug_key, help="Détails techniques (OCR)"):
+    st.divider()
+
+    # 5. Debug section (discrete button + modal at bottom)
+    if st.button("🔧 Détails OCR", key="debug_button", help="Afficher les détails techniques (OCR)"):
         st.session_state["show_debug"] = True
 
     if st.session_state.get("show_debug", False):
-        with st.dialog("🔧 Détails OCR"):
-            st.markdown("**Paramètres OCR utilisés:**")
-            st.markdown(f"- **DPI:** {extraction_info.ocr_settings.dpi}")
-            st.markdown(f"- **Langue:** {extraction_info.ocr_settings.lang}")
-            st.markdown(f"- **Config:** `{extraction_info.ocr_settings.config}`")
-            st.markdown(f"- **Prétraitement:** {', '.join(extraction_info.ocr_settings.preprocessing)}")
+        ext_info = st.session_state.get("extraction_info")
+        if ext_info:
+            with st.dialog("🔧 Détails OCR"):
+                st.markdown("**Paramètres OCR utilisés:**")
+                st.markdown(f"- **DPI:** {ext_info.ocr_settings.dpi}")
+                st.markdown(f"- **Langue:** {ext_info.ocr_settings.lang}")
+                st.markdown(f"- **Config:** `{ext_info.ocr_settings.config}`")
+                st.markdown(f"- **Prétraitement:** {', '.join(ext_info.ocr_settings.preprocessing)}")
 
-            st.markdown("---")
-            st.markdown("**Texte détecté par page:**")
+                st.markdown("---")
+                st.markdown("**Texte détecté par page:**")
 
-            for pt in extraction_info.pages:
-                st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
-                if pt.text.strip():
-                    with st.container():
-                        st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
-                else:
-                    st.caption("(aucun texte détecté)")
+                for pt in ext_info.pages:
+                    st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
+                    if pt.text.strip():
+                        with st.container():
+                            st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
+                    else:
+                        st.caption("(aucun texte détecté)")
 
-            st.markdown("---")
-            st.markdown("**Texte complet concaténé:**")
-            with st.container():
-                st.code(extraction_info.text_used[:3000] + ("..." if len(extraction_info.text_used) > 3000 else ""), language=None)
+                st.markdown("---")
+                st.markdown("**Texte complet concaténé:**")
+                with st.container():
+                    st.code(ext_info.text_used[:3000] + ("..." if len(ext_info.text_used) > 3000 else ""), language=None)
 
-            if st.button("Fermer", key=f"close_{debug_key}"):
-                st.session_state["show_debug"] = False
-                st.rerun()
+                if st.button("Fermer", key="close_debug"):
+                    st.session_state["show_debug"] = False
+                    st.rerun()
+        else:
+            st.warning("Aucune donnée d'extraction disponible.")
 
 elif not uploaded:
     st.caption("📥 Déposez un PDF (1-2 pages) ou jusqu'à 2 images PNG/JPEG.")
