@@ -41,6 +41,32 @@ def _lucide_icon(name: str) -> str:
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+div[data-testid="stVerticalBlock"]:has(> div > div > img):has(~ div > button) {
+    position: relative;
+}
+
+div[data-testid="stVerticalBlock"]:has(> div > div > img):has(~ div > button) button {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    z-index: 999 !important;
+    background: rgba(255,255,255,0.95) !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+    opacity: 0.85 !important;
+    transition: opacity 0.2s, box-shadow 0.2s !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(> div > div > img):has(~ div > button) button:hover {
+    opacity: 1 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    background: rgba(255,255,255,1) !important;
+}
+
 html, body, .stApp {
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 13px;
@@ -108,6 +134,15 @@ run_button = st.button(
 )
 
 # ---------- Helpers -----------------------------------------------------------
+
+LUCIDE_ICONS = {
+    "search": """<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>""",
+    "info": """<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>""",
+}
+
+
+def _lucide_icon(name: str) -> str:
+    return LUCIDE_ICONS.get(name, "")
 
 
 def _extract_qr_url(results) -> str | None:
@@ -225,9 +260,13 @@ if run_button and uploaded:
             st.caption(f"Page {page.index + 1} — {page.source.upper()}")
             try:
                 preview = page.render(dpi=72) if page.source == "pdf" else page.render()
-                st.image(preview, use_container_width=True)
-                if st.button("🔍 Agrandir", key=f"view_page_{page.index}"):
-                    st.session_state[f"show_page_{page.index}"] = True
+                wrapper = st.container()
+                with wrapper:
+                    st.image(preview, use_container_width=True)
+                    col_btn1, col_btn2 = st.columns([1, 4])
+                    with col_btn2:
+                        if st.button(_lucide_icon("search"), key=f"view_page_{page.index}", help="Agrandir cette page"):
+                            st.session_state[f"show_page_{page.index}"] = True
             except Exception as exc:  # pragma: no cover
                 st.caption(f"Aperçu indisponible : {exc}")
 
