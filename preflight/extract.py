@@ -9,10 +9,17 @@ Strategy:
 2. For raster pages (PNG/JPEG uploads), always use OCR.
 
 Tesseract is invoked with `lang='fra'` so French accents survive.
+
+OCR improvements for small legal text:
+- Higher DPI (600) for better resolution of small text
+- Image preprocessing (CLAHE, grayscale) to enhance text contrast
+- Optimized PSM configuration for better text block detection
 """
 
 from __future__ import annotations
 
+import cv2
+import numpy as np
 from dataclasses import dataclass
 from enum import Enum
 
@@ -21,9 +28,10 @@ from PIL import Image
 
 from preflight.document import Document, Page
 
-OCR_DPI = 300
+OCR_DPI = 600
 TEXT_LAYER_MIN_WORDS = 20
 TESSERACT_LANG = "fra"
+TESSERACT_CONFIG = "--psm 6"
 
 
 class ExtractionMethod(str, Enum):
@@ -33,15 +41,55 @@ class ExtractionMethod(str, Enum):
 
 
 @dataclass(frozen=True)
+class OcrSettings:
+    dpi: int
+    lang: str
+    config: str
+    preprocessing: tuple[str, ...]
+
+
+OCR_SETTINGS = OcrSettings(
+    dpi=OCR_DPI,
+    lang=TESSERACT_LANG,
+    config=TESSERACT_CONFIG,
+    preprocessing=("grayscale", "CLAHE", "sharpening"),
+)
+
+
+@dataclass(frozen=True)
 class PageText:
     text: str
     method: ExtractionMethod
     page_index: int
+    ocr_settings_used: OcrSettings | None = None
+
+
+def _preprocess_for_ocr(image: Image.Image) -> Image.Image:
+    """Enhance image for better OCR of small text.
+
+    Applies:
+    - Grayscale conversion
+    - CLAHE (Contrast Limited Adaptive Histogram Equalization) for enhanced text contrast
+    - Light sharpening to improve text edge definition
+    """
+    img = np.array(image)
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    else:
+        gray = img
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(gray)
+    kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+    sharpened = cv2.filter2D(enhanced, -1, kernel)
+    return Image.frombytes("L", (sharpened.shape[1], sharpened.shape[0]), sharpened)
 
 
 def _ocr(image: Image.Image) -> str:
     try:
-        return pytesseract.image_to_string(image, lang=TESSERACT_LANG)
+        processed = _preprocess_for_ocr(image)
+        return pytesseract.image_to_string(
+            processed, lang=TESSERACT_LANG, config=TESSERACT_CONFIG
+        )
     except pytesseract.TesseractNotFoundError as exc:  # pragma: no cover
         raise RuntimeError(
             "Tesseract OCR n'est pas installé. Voir README pour l'installation."
@@ -53,7 +101,12 @@ def extract_page_text(page: Page) -> PageText:
         rendered = page.render()
         text = _ocr(rendered)
         method = ExtractionMethod.OCR if text.strip() else ExtractionMethod.EMPTY
-        return PageText(text=text, method=method, page_index=page.index)
+        return PageText(
+            text=text,
+            method=method,
+            page_index=page.index,
+            ocr_settings_used=OCR_SETTINGS if method == ExtractionMethod.OCR else None,
+        )
 
     # PDF page: try text layer first.
     text = page.text_layer().strip()
@@ -65,7 +118,12 @@ def extract_page_text(page: Page) -> PageText:
     rendered = page.render(dpi=OCR_DPI)
     ocr_text = _ocr(rendered)
     if ocr_text.strip():
-        return PageText(text=ocr_text, method=ExtractionMethod.OCR, page_index=page.index)
+        return PageText(
+            text=ocr_text,
+            method=ExtractionMethod.OCR,
+            page_index=page.index,
+            ocr_settings_used=OCR_SETTINGS,
+        )
     # OCR also empty: return whatever we had from the text layer (possibly empty).
     return PageText(
         text=text,
@@ -86,6 +144,8 @@ def all_text(document: Document) -> str:
 __all__ = [
     "ExtractionMethod",
     "OCR_DPI",
+    "OCR_SETTINGS",
+    "OcrSettings",
     "PageText",
     "all_text",
     "extract_document_text",

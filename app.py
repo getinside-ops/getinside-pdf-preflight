@@ -11,9 +11,10 @@ from preflight.formats import FORMAT_NAMES, custom_format, get_format
 from preflight.industries import INDUSTRY_NAMES
 from preflight.pipeline import (
     CheckContext,
+    ExtractionInfo,
     LOGO_LIBRARY_ROOT,
     overall_verdict,
-    run_all_checks,
+    run_all_checks_with_extraction,
     summarize,
 )
 from preflight.checks import Severity
@@ -180,7 +181,9 @@ if run_button and uploaded:
     library = LogoLibrary(LOGO_LIBRARY_ROOT)
 
     with st.spinner("Analyse en cours…"):
-        results = run_all_checks(document, context, logo_library=library)
+        results, extraction_info = run_all_checks_with_extraction(
+            document, context, logo_library=library
+        )
 
     # 1. Preview at top, always visible, small thumbnails
     n_pages = len(document.pages)
@@ -215,6 +218,30 @@ if run_button and uploaded:
 
     # 4. HTML report
     _render_html_report(results, context)
+
+    # 5. Debug section
+    with st.expander("🔧 Debug — Détails OCR"):
+        st.markdown("**Paramètres OCR utilisés:**")
+        st.markdown(f"- **DPI:** {extraction_info.ocr_settings.dpi}")
+        st.markdown(f"- **Langue:** {extraction_info.ocr_settings.lang}")
+        st.markdown(f"- **Config:** `{extraction_info.ocr_settings.config}`")
+        st.markdown(f"- **Prétraitement:** {', '.join(extraction_info.ocr_settings.preprocessing)}")
+
+        st.markdown("---")
+        st.markdown("**Texte détecté par page:**")
+
+        for pt in extraction_info.pages:
+            st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
+            if pt.text.strip():
+                with st.container():
+                    st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
+            else:
+                st.caption("(aucun texte détecté)")
+
+        st.markdown("---")
+        st.markdown("**Texte complet concaténé:**")
+        with st.container():
+            st.code(extraction_info.text_used[:3000] + ("..." if len(extraction_info.text_used) > 3000 else ""), language=None)
 
 elif not uploaded:
     st.caption("📥 Déposez un PDF (1-2 pages) ou jusqu'à 2 images PNG/JPEG.")

@@ -21,7 +21,7 @@ from preflight.checks.offer import check_offer
 from preflight.checks.printer import check_printer
 from preflight.checks.qrcode import check_qr
 from preflight.document import Document
-from preflight.extract import all_text
+from preflight.extract import OCR_SETTINGS, OcrSettings, PageText, all_text, extract_document_text
 from preflight.formats import FormatSpec
 from preflight.logos import LogoLibrary
 
@@ -35,6 +35,13 @@ class CheckContext:
     format_spec: FormatSpec
     industry: str
     print_method: PrintMethod
+
+
+@dataclass(frozen=True)
+class ExtractionInfo:
+    pages: list[PageText]
+    ocr_settings: OcrSettings
+    text_used: str
 
 
 def run_all_checks(
@@ -64,6 +71,46 @@ def run_all_checks(
     return results
 
 
+def run_all_checks_with_extraction(
+    document: Document,
+    context: CheckContext,
+    *,
+    logo_library: LogoLibrary | None = None,
+) -> tuple[list[CheckResult], ExtractionInfo]:
+    if logo_library is None:
+        logo_library = LogoLibrary(LOGO_LIBRARY_ROOT)
+
+    results: list[CheckResult] = []
+    results.extend(check_dimensions(document, context.format_spec))
+    results.extend(check_colorspace(document))
+    results.extend(check_qr(document))
+    results.extend(
+        check_logos(document, logo_library, context.print_method)
+    )
+
+    page_texts = extract_document_text(document)
+    document_text = all_text(document)
+
+    results.extend(check_advertiser(document_text))
+    results.extend(check_offer(document_text))
+    results.extend(check_printer(document_text, context.print_method))
+    results.extend(check_industry(document_text, context.industry))
+
+    ocr_settings = OCR_SETTINGS
+    for pt in page_texts:
+        if pt.ocr_settings_used is not None:
+            ocr_settings = pt.ocr_settings_used
+            break
+
+    extraction_info = ExtractionInfo(
+        pages=page_texts,
+        ocr_settings=ocr_settings,
+        text_used=document_text,
+    )
+
+    return results, extraction_info
+
+
 def summarize(results: list[CheckResult]) -> dict[str, int]:
     counts = {Severity.ERROR: 0, Severity.WARNING: 0, Severity.INFO: 0}
     for r in results:
@@ -82,9 +129,11 @@ def overall_verdict(results: list[CheckResult]) -> Literal["pass", "review", "fa
 
 __all__ = [
     "CheckContext",
+    "ExtractionInfo",
     "LOGO_LIBRARY_ROOT",
     "PrintMethod",
     "overall_verdict",
     "run_all_checks",
+    "run_all_checks_with_extraction",
     "summarize",
 ]
