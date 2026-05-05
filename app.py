@@ -105,29 +105,54 @@ pre, code, kbd {
 }
 </style>""", unsafe_allow_html=True)
 
-# ---------- Sidebar -----------------------------------------------------------
+# ---------- Top bar -----------------------------------------------------------
 
-st.sidebar.markdown("**🖨️ Paramètres**")
-st.sidebar.divider()
-
-format_name = st.sidebar.selectbox("Format", options=FORMAT_NAMES, index=0)
-if format_name == "Custom":
-    custom_w = st.sidebar.number_input("Largeur (mm)", min_value=10, max_value=1000, value=148, step=1)
-    custom_h = st.sidebar.number_input("Hauteur (mm)", min_value=10, max_value=1000, value=210, step=1)
-    format_spec = custom_format(float(custom_w), float(custom_h))
-else:
-    format_spec = get_format(format_name)
-
-industry = st.sidebar.selectbox("Industrie", options=INDUSTRY_NAMES)
-
-print_method = st.sidebar.radio(
-    "Impression",
-    options=["Imprimé par getinside", "Imprimé par la marque"],
+st.markdown(
+    f"<div style='display:flex;align-items:center;gap:8px;margin-bottom:16px'>"
+    f"<span style='color:#111827;font-size:16px;font-weight:700'>"
+    f"{_lucide_icon('printer', 20)}&nbsp;Print Preflight — Getinside</span>"
+    f"</div>",
+    unsafe_allow_html=True,
 )
 
-# ---------- Main panel --------------------------------------------------------
+# ---------- Controls ----------------------------------------------------------
 
-st.markdown("#### 🖨️ Print Preflight — Getinside")
+has_stored_results = "results" in st.session_state and "context" in st.session_state
+has_doc_data = "doc_name" in st.session_state and "doc_data" in st.session_state
+
+if has_stored_results:
+    ctx_stored = st.session_state["context"]
+    format_spec = ctx_stored.format_spec
+    industry = ctx_stored.industry
+    print_method = ctx_stored.print_method
+    col_summary, col_btn = st.columns([9, 1])
+    with col_summary:
+        st.markdown(
+            f"<span style='color:#6b7280;font-size:13px'>"
+            f"<b>{format_spec.name}</b> &nbsp;·&nbsp; {industry} &nbsp;·&nbsp; {print_method}</span>",
+            unsafe_allow_html=True,
+        )
+    with col_btn:
+        if st.button("Modifier", key="modify_settings"):
+            st.session_state.clear()
+            st.rerun()
+else:
+    col_fmt, col_ind, col_print = st.columns([2, 2, 3])
+    with col_fmt:
+        format_name = st.selectbox("Format", options=FORMAT_NAMES, index=0)
+        if format_name == "Custom":
+            custom_w = st.number_input("Largeur (mm)", min_value=10, max_value=1000, value=148, step=1)
+            custom_h = st.number_input("Hauteur (mm)", min_value=10, max_value=1000, value=210, step=1)
+            format_spec = custom_format(float(custom_w), float(custom_h))
+        else:
+            format_spec = get_format(format_name)
+    with col_ind:
+        industry = st.selectbox("Industrie", options=INDUSTRY_NAMES)
+    with col_print:
+        print_method = st.radio(
+            "Impression",
+            options=["Imprimé par getinside", "Imprimé par la marque"],
+        )
 
 uploaded = st.file_uploader(
     "PDF (1-2 pages) ou 1-2 images PNG/JPEG",
@@ -339,10 +364,6 @@ def _display_analysis_results(document, results, context, extraction_info, doc_n
 
 
 # ---------- Run ---------------------------------------------------------------
-
-# Check if we have stored results to display
-has_stored_results = "results" in st.session_state and "context" in st.session_state
-has_doc_data = "doc_name" in st.session_state and "doc_data" in st.session_state
 
 # Initialize variables for display code
 display_results = False
