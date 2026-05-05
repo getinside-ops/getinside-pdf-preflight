@@ -7,14 +7,14 @@ from preflight.checks import CheckResult, Severity
 from preflight.pipeline import CheckContext
 
 _CHECK_META: dict[str, tuple[str, str]] = {
-    "dimensions": ("📐", "DIMENSIONS"),
-    "colorspace":  ("🎨", "COULEURS"),
-    "qrcode":      ("📱", "QR CODE"),
-    "logos":       ("🏷️", "LOGOS"),
-    "advertiser":  ("🏢", "ANNONCEUR"),
-    "offer":       ("📅", "OFFRE"),
-    "printer":     ("🖨️", "IMPRIMEUR"),
-    "industry":    ("⚖️", "RÉGLEMENTAIRE"),
+    "dimensions": ("", "DIMENSIONS"),
+    "colorspace":  ("", "COULEURS"),
+    "qrcode":      ("", "QR CODE"),
+    "logos":       ("", "LOGOS"),
+    "advertiser":  ("", "ANNONCEUR"),
+    "offer":       ("", "OFFRE"),
+    "printer":     ("", "IMPRIMEUR"),
+    "industry":    ("", "RÉGLEMENTAIRE"),
 }
 _CHECK_ORDER = list(_CHECK_META.keys())
 
@@ -89,11 +89,11 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
         w_count = sum(1 for r in items if r.severity is Severity.WARNING)
 
         if worst is Severity.ERROR:
-            status = f"❌ {e_count} erreur{'s' if e_count > 1 else ''}"
+            status = f"[ERROR] {e_count} erreur{'s' if e_count > 1 else ''}"
         elif worst is Severity.WARNING:
-            status = f"⚠️ {w_count} avertissement{'s' if w_count > 1 else ''}"
+            status = f"[WARNING] {w_count} avertissement{'s' if w_count > 1 else ''}"
         else:
-            status = "✅"
+            status = "[OK]"
 
         mt = "margin-top:10px;border-top:1px solid #f3f4f6;padding-top:10px" if i > 0 else ""
         parts.append(

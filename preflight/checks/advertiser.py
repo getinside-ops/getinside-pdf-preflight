@@ -19,7 +19,7 @@ from preflight.checks import CheckResult, Severity
 from preflight.text_normalize import normalize
 
 RCS_RE = re.compile(
-    r"rcs\s+([a-z][a-z\-\s]+?)\s+(\d{3}\s?\d{3}\s?\d{3})",
+    r"rcs\s*:?\s*([a-z][a-z\-\s]+?)\s+[a-z]?\s*(\d{3}\s?\d{3}\s?\d{3})",
     re.IGNORECASE,
 )
 

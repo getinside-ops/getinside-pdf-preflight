@@ -31,14 +31,32 @@ st.set_page_config(
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-html {
+html, body, .stApp {
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+}
+
+h1, h2, h3, h4 {
+    font-size: 15px !important;
+    font-weight: 600;
+}
+
+p, div, span {
+    font-size: 13px;
+}
+
+.stMarkdown {
+    font-size: 13px;
+}
+
+.stCaption {
+    font-size: 11px !important;
 }
 
 pre, code, kbd {
     font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-    font-size: 12px;
-    line-height: 1.7;
+    font-size: 11px;
+    line-height: 1.5;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -107,25 +125,25 @@ def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
     chips: list[str] = []
     if document.kind == "pdf":
         if meta.pdf_version:
-            chips.append(f"<span style='color:#374151'>📄 {escape(meta.pdf_version)}</span>")
+            chips.append(f"<span style='color:#374151'>PDF: {escape(meta.pdf_version)}</span>")
         if meta.pdf_x:
-            chips.append(f"<span style='color:#16a34a;font-weight:600'>✅ {escape(meta.pdf_x)}</span>")
+            chips.append(f"<span style='color:#16a34a;font-weight:600'>PDF/X: {escape(meta.pdf_x)}</span>")
         else:
-            chips.append("<span style='color:#d97706;font-weight:600'>⚠️ Non PDF/X</span>")
+            chips.append("<span style='color:#d97706;font-weight:600'>PDF/X: Non conforme</span>")
         software_name = meta.creator or meta.producer
         if software_name:
             color = "#d97706" if flag == "suspicious" else "#6b7280"
-            prefix = "⚠️" if flag == "suspicious" else "✏️"
-            chips.append(f"<span style='color:{color};font-weight:{'600' if flag == 'suspicious' else 'normal'}'>{prefix} {escape(software_name)}</span>")
+            prefix = "⚠️" if flag == "suspicious" else "Créé avec: "
+            chips.append(f"<span style='color:{color};font-weight:{'600' if flag == 'suspicious' else 'normal'}'>{prefix}{escape(software_name)}</span>")
         if meta.creation_date:
-            chips.append(f"<span style='color:#6b7280'>📅 {escape(meta.creation_date)}</span>")
+            chips.append(f"<span style='color:#6b7280'>Créé le: {escape(meta.creation_date)}</span>")
     else:
         if meta.file_format:
-            chips.append(f"<span style='color:#374151'>📄 {escape(meta.file_format)}</span>")
+            chips.append(f"<span style='color:#374151'>Format: {escape(meta.file_format)}</span>")
         if meta.color_mode:
-            chips.append(f"<span style='color:#374151'>🎨 {escape(meta.color_mode)}</span>")
+            chips.append(f"<span style='color:#374151'>Couleur: {escape(meta.color_mode)}</span>")
         if meta.dpi:
-            chips.append(f"<span style='color:#374151'>🖨️ {escape(meta.dpi)} DPI</span>")
+            chips.append(f"<span style='color:#374151'>DPI: {escape(meta.dpi)}</span>")
 
     sep = "<span style='color:#d1d5db'>&nbsp;·&nbsp;</span>"
     meta_html = sep.join(chips) if chips else ""
@@ -133,24 +151,24 @@ def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
     # QR URL
     if qr_url:
         short = qr_url if len(qr_url) <= 60 else qr_url[:57] + "…"
-        url_html = f'<a href="{escape(qr_url)}" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none">🔗 {escape(short)}</a>'
+        url_html = f'<a href="{escape(qr_url)}" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none">QR: {escape(short)}</a>'
     else:
-        url_html = "<span style='color:#9ca3af'>🔗 Aucune URL QR détectée</span>"
+        url_html = "<span style='color:#9ca3af'>QR: Aucune URL détectée</span>"
 
     # Promo code
     if promo_code:
-        promo_html = f"<span style='background:#dcfce7;color:#166534;font-weight:700;padding:2px 8px;border-radius:4px;font-size:13px'>🎟️ {escape(promo_code)}</span>"
+        promo_html = f"<span style='background:#dcfce7;color:#166534;font-weight:700;padding:2px 8px;border-radius:4px;font-size:12px'>Code: {escape(promo_code)}</span>"
     else:
-        promo_html = "<span style='color:#9ca3af;font-size:12px'>🎟️ Aucun code promo</span>"
+        promo_html = "<span style='color:#9ca3af;font-size:12px'>Code: Aucun</span>"
 
     st.markdown(
-        f"<div style='border:1px solid #e5e7eb;background:#f9fafb;border-radius:10px;"
-        f"padding:12px 16px;margin-bottom:12px'>"
-        f"<div style='font-size:15px;font-weight:700;color:#111827;margin-bottom:6px'>📄 {escape(doc_name)}</div>"
+        f"<div style='border:1px solid #e5e7eb;background:#f9fafb;border-radius:8px;"
+        f"padding:10px 14px;margin-bottom:12px'>"
+        f"<div style='font-size:13px;font-weight:600;color:#111827;margin-bottom:6px'>Fichier: {escape(doc_name)}</div>"
         f"<div style='display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px'>"
         f"{url_html}&nbsp;&nbsp;{promo_html}"
         f"</div>"
-        f"<div style='font-size:11.5px;line-height:1.8'>{meta_html}</div>"
+        f"<div style='font-size:11px;line-height:1.6;color:#6b7280'>{meta_html}</div>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -219,29 +237,38 @@ if run_button and uploaded:
     # 4. HTML report
     _render_html_report(results, context)
 
-    # 5. Debug section
-    with st.expander("🔧 Debug — Détails OCR"):
-        st.markdown("**Paramètres OCR utilisés:**")
-        st.markdown(f"- **DPI:** {extraction_info.ocr_settings.dpi}")
-        st.markdown(f"- **Langue:** {extraction_info.ocr_settings.lang}")
-        st.markdown(f"- **Config:** `{extraction_info.ocr_settings.config}`")
-        st.markdown(f"- **Prétraitement:** {', '.join(extraction_info.ocr_settings.preprocessing)}")
+    # 5. Debug section (discrete button + modal)
+    debug_key = f"debug_modal_{len(results)}"
+    if st.button("🔧", key=debug_key, help="Détails techniques (OCR)"):
+        st.session_state["show_debug"] = True
 
-        st.markdown("---")
-        st.markdown("**Texte détecté par page:**")
+    if st.session_state.get("show_debug", False):
+        with st.dialog("🔧 Détails OCR"):
+            st.markdown("**Paramètres OCR utilisés:**")
+            st.markdown(f"- **DPI:** {extraction_info.ocr_settings.dpi}")
+            st.markdown(f"- **Langue:** {extraction_info.ocr_settings.lang}")
+            st.markdown(f"- **Config:** `{extraction_info.ocr_settings.config}`")
+            st.markdown(f"- **Prétraitement:** {', '.join(extraction_info.ocr_settings.preprocessing)}")
 
-        for pt in extraction_info.pages:
-            st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
-            if pt.text.strip():
-                with st.container():
-                    st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
-            else:
-                st.caption("(aucun texte détecté)")
+            st.markdown("---")
+            st.markdown("**Texte détecté par page:**")
 
-        st.markdown("---")
-        st.markdown("**Texte complet concaténé:**")
-        with st.container():
-            st.code(extraction_info.text_used[:3000] + ("..." if len(extraction_info.text_used) > 3000 else ""), language=None)
+            for pt in extraction_info.pages:
+                st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
+                if pt.text.strip():
+                    with st.container():
+                        st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
+                else:
+                    st.caption("(aucun texte détecté)")
+
+            st.markdown("---")
+            st.markdown("**Texte complet concaténé:**")
+            with st.container():
+                st.code(extraction_info.text_used[:3000] + ("..." if len(extraction_info.text_used) > 3000 else ""), language=None)
+
+            if st.button("Fermer", key=f"close_{debug_key}"):
+                st.session_state["show_debug"] = False
+                st.rerun()
 
 elif not uploaded:
     st.caption("📥 Déposez un PDF (1-2 pages) ou jusqu'à 2 images PNG/JPEG.")
