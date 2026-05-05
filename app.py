@@ -28,6 +28,16 @@ st.set_page_config(
     layout="wide",
 )
 
+LUCIDE_ICONS = {
+    "check_circle": """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>""",
+    "alert_triangle": """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>""",
+    "x_circle": """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>""",
+}
+
+
+def _lucide_icon(name: str) -> str:
+    return LUCIDE_ICONS.get(name, "")
+
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -245,14 +255,30 @@ if run_button and uploaded:
     w = counts.get("warning", 0)
     i = counts.get("info", 0)
     if verdict == "fail":
-        parts = [f"❌ **{e} erreur{'s' if e > 1 else ''}**"]
+        bg = "#fee2e2"
+        icon = _lucide_icon("x_circle")
+        color = "#dc2626"
+        main = f"{icon} <b>✕ {e} erreur{'s' if e > 1 else ''}</b>"
         if w:
-            parts.append(f"⚠️ {w} avertissement{'s' if w > 1 else ''}")
-        st.error("  ·  ".join(parts) + f"  ·  ℹ️ {i} infos")
+            main += f" · ⚠️ {w} avertissement{'s' if w > 1 else ''}"
     elif verdict == "review":
-        st.warning(f"⚠️ **{w} avertissement{'s' if w > 1 else ''}**  ·  ℹ️ {i} infos")
+        bg = "#fef3c7"
+        icon = _lucide_icon("alert_triangle")
+        color = "#92400e"
+        main = f"{icon} <b>⚠️ {w} avertissement{'s' if w > 1 else ''}</b>"
     else:
-        st.success(f"✅ **Conforme** — prêt pour l'impression  ·  ℹ️ {i} infos")
+        bg = "#dcfce7"
+        icon = _lucide_icon("check_circle")
+        color = "#166534"
+        main = f"{icon} <b>✓ Conforme</b> — prêt pour l'impression"
+
+    st.markdown(
+        f"<div style='background:{bg};border-radius:8px;padding:12px 16px;margin-bottom:12px'>"
+        f"<span style='color:{color};font-size:14px'>{main}</span>"
+        f"<span style='color:#6b7280;font-size:13px'>  ·  ℹ️ {i} infos</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
     # 4. HTML report
     _render_html_report(results, context)
