@@ -101,6 +101,27 @@ def test_offer_detects_promo_code():
     assert any("HELLO2026" in r.message for r in infos)
 
 
+@pytest.mark.parametrize("text", [
+    "Avec le code : SAGETCAATS",
+    "Avec le code SAGETCAATS",
+    "Code remise : SAVE20",
+    "Code réduction : PROMO50",
+    "Code reduction : PROMO50",
+    "Code avantage : VIP2026",
+    "Code exclusif : INSIDER",
+    "Utilisez le code : BIENVENUE",
+    "Utilisez code WELCOME",
+    "Votre code : FIDELE",
+    "Mon code : MONCODE1",
+    "Ton code : TONCODE1",
+])
+def test_offer_detects_promo_code_various_phrasings(text):
+    code = text.split()[-1].rstrip(".,;")
+    results = check_offer(text)
+    infos = [r for r in results if r.severity is Severity.INFO]
+    assert any(code in r.message for r in infos), f"Code not detected in: {text!r}"
+
+
 def test_offer_no_promo_code_is_info_not_error():
     results = check_offer("Offre valable jusqu'au 31/12/2026.")
     assert not _has_error(results)
