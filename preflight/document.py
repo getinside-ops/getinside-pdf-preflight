@@ -46,6 +46,8 @@ class Page:
     def render(self, dpi: int = 300) -> Image.Image: ...
     def text_layer(self) -> str: ...
     def color_spaces(self) -> set[str]: ...
+    def has_trim_marks(self) -> bool: ...
+    def safe_zone_violations_mm(self, safe_zone_mm: float) -> list[dict]: ...
 
 
 class PdfPage(Page):
@@ -91,6 +93,80 @@ class PdfPage(Page):
 
     def text_layer(self) -> str:
         return self._page.get_text("text") or ""
+
+    def trim_box_rect(self) -> "fitz.Rect | None":
+        """Raw TrimBox as fitz.Rect (page coordinate space), or None if equal to MediaBox."""
+        try:
+            trim = self._page.trimbox
+        except AttributeError:
+            return None
+        media = self._page.mediabox
+        if trim is None or trim == media:
+            return None
+        return fitz.Rect(trim)
+
+    def has_trim_marks(self) -> bool:
+        """True if strokes exist entirely outside the TrimBox (Illustrator-style trim marks)."""
+        trim = self.trim_box_rect()
+        if trim is None:
+            return False
+        try:
+            drawings = self._page.get_drawings()
+        except Exception:
+            return False
+        for d in drawings:
+            if d.get("type") not in ("s", "fs"):
+                continue
+            r = d.get("rect")
+            if r is None:
+                continue
+            r = fitz.Rect(r)
+            if r.is_empty or r.is_infinite:
+                continue
+            if not trim.intersects(r):
+                return True
+        return False
+
+    def safe_zone_violations_mm(self, safe_zone_mm: float) -> list[dict]:
+        """Text blocks within safe_zone_mm of the TrimBox edge (inside TrimBox only).
+        Returns [] if no TrimBox defined."""
+        MM_PER_PT = 25.4 / 72.0
+        trim = self.trim_box_rect()
+        if trim is None:
+            return []
+        safe_pt = safe_zone_mm / MM_PER_PT
+        safe_rect = fitz.Rect(
+            trim.x0 + safe_pt,
+            trim.y0 + safe_pt,
+            trim.x1 - safe_pt,
+            trim.y1 - safe_pt,
+        )
+        violations: list[dict] = []
+        for b in self._page.get_text("blocks"):
+            if len(b) < 7 or b[6] != 0:  # skip image blocks (type 1)
+                continue
+            x0, y0, x1, y1, text = b[0], b[1], b[2], b[3], b[4]
+            if not (isinstance(text, str) and text.strip()):
+                continue
+            block_rect = fitz.Rect(x0, y0, x1, y1)
+            if block_rect.is_empty:
+                continue
+            if not trim.intersects(block_rect):  # outside TrimBox: trim marks area, skip
+                continue
+            if safe_rect.contains(block_rect):  # comfortably inside safe zone: OK
+                continue
+            # Violation: calculate min distance from each TrimBox edge
+            dist_l = (block_rect.x0 - trim.x0) * MM_PER_PT
+            dist_t = (block_rect.y0 - trim.y0) * MM_PER_PT
+            dist_r = (trim.x1 - block_rect.x1) * MM_PER_PT
+            dist_b = (trim.y1 - block_rect.y1) * MM_PER_PT
+            positive = [d for d in [dist_l, dist_t, dist_r, dist_b] if d >= 0]
+            min_dist = round(min(positive), 1) if positive else 0.0
+            violations.append({
+                "text": text.strip()[:50].replace("\n", " "),
+                "min_dist_mm": min_dist,
+            })
+        return violations
 
     def color_spaces(self) -> set[str]:
         spaces: set[str] = set()
@@ -165,6 +241,12 @@ class ImagePage(Page):
             "CMYK": "CMYK",
             "1": "GRAY",
         }.get(mode, mode.upper())  # type: ignore[return-value]
+
+    def has_trim_marks(self) -> bool:
+        return False
+
+    def safe_zone_violations_mm(self, safe_zone_mm: float) -> list[dict]:
+        return []
 
     def color_mode(self) -> str:
         return self._image.mode

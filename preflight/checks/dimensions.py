@@ -75,13 +75,14 @@ def _pdf_box_consistency(page, format_spec: FormatSpec) -> list[CheckResult]:
             )
         ]
     if trim is not None and media is not None:
+        results: list[CheckResult] = []
         expected_bleed_w = trim.width + 2 * format_spec.bleed_mm
         expected_bleed_h = trim.height + 2 * format_spec.bleed_mm
         if (
             abs(media.width - expected_bleed_w) > format_spec.tolerance_mm
             or abs(media.height - expected_bleed_h) > format_spec.tolerance_mm
         ):
-            return [
+            results.append(
                 CheckResult(
                     check_name="dimensions",
                     severity=Severity.WARNING,
@@ -97,7 +98,53 @@ def _pdf_box_consistency(page, format_spec: FormatSpec) -> list[CheckResult]:
                     },
                     page=page.index,
                 )
-            ]
+            )
+
+        # Trim marks
+        if page.has_trim_marks():
+            results.append(
+                CheckResult(
+                    check_name="dimensions",
+                    severity=Severity.INFO,
+                    message=f"page {page.index + 1}: traits de coupe détectés.",
+                    page=page.index,
+                )
+            )
+
+        # Safe zone
+        violations = page.safe_zone_violations_mm(format_spec.safe_zone_mm)
+        if violations:
+            worst = min(violations, key=lambda v: v["min_dist_mm"])
+            results.append(
+                CheckResult(
+                    check_name="dimensions",
+                    severity=Severity.WARNING,
+                    message=(
+                        f"page {page.index + 1}: contenu dans la zone tranquille "
+                        f"(< {format_spec.safe_zone_mm} mm du bord final). "
+                        f"Exemple : « {worst['text']} » à {worst['min_dist_mm']} mm."
+                    ),
+                    details={
+                        "violations_count": len(violations),
+                        "min_dist_mm": worst["min_dist_mm"],
+                    },
+                    page=page.index,
+                )
+            )
+        else:
+            results.append(
+                CheckResult(
+                    check_name="dimensions",
+                    severity=Severity.INFO,
+                    message=(
+                        f"page {page.index + 1}: zone tranquille respectée "
+                        f"(≥ {format_spec.safe_zone_mm} mm depuis le bord final)."
+                    ),
+                    page=page.index,
+                )
+            )
+
+        return results
     return []
 
 

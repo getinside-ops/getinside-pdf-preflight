@@ -26,6 +26,20 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown("""<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+html {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+pre, code, kbd {
+    font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+}
+</style>""", unsafe_allow_html=True)
+
 # ---------- Sidebar -----------------------------------------------------------
 
 st.sidebar.markdown("**🖨️ Paramètres**")

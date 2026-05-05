@@ -64,6 +64,51 @@ def _make_jpeg(width_px: int, height_px: int, dpi: int = 300, mode: str = "CMYK"
     return out.getvalue()
 
 
+def _make_pdf_with_trimbox(
+    *,
+    trim_w_pt: float = A5_W_PT,
+    trim_h_pt: float = A5_H_PT,
+    bleed_mm: float = 2.0,
+    text: str = "Hello preflight",
+    text_margin_pt: float = 40.0,
+    add_trim_marks: bool = False,
+) -> bytes:
+    """PDF with explicit TrimBox and MediaBox set to trimbox + bleed."""
+    bleed_pt = bleed_mm / 25.4 * 72.0
+    media_w = trim_w_pt + 2 * bleed_pt
+    media_h = trim_h_pt + 2 * bleed_pt
+    doc = fitz.open()
+    page = doc.new_page(width=media_w, height=media_h)
+    # Set TrimBox offset by bleed
+    trim_rect = fitz.Rect(bleed_pt, bleed_pt, bleed_pt + trim_w_pt, bleed_pt + trim_h_pt)
+    page.set_trimbox(trim_rect)
+    # Insert text at margin from TrimBox
+    page.insert_text(
+        (trim_rect.x0 + text_margin_pt, trim_rect.y0 + text_margin_pt),
+        text,
+        fontsize=10,
+    )
+    if add_trim_marks:
+        # Draw short lines at corners outside TrimBox (simulating Illustrator marks)
+        mark_len = 20  # ~7mm
+        gap = 5        # gap from trim edge
+        shape = page.new_shape()
+        # Top-left corner marks
+        shape.draw_line(
+            fitz.Point(trim_rect.x0 - gap - mark_len, trim_rect.y0),
+            fitz.Point(trim_rect.x0 - gap, trim_rect.y0),
+        )
+        shape.draw_line(
+            fitz.Point(trim_rect.x0, trim_rect.y0 - gap - mark_len),
+            fitz.Point(trim_rect.x0, trim_rect.y0 - gap),
+        )
+        shape.finish(color=(0, 0, 0), width=0.5)
+        shape.commit()
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()
+
+
 @pytest.fixture
 def pdf_a5_single() -> UploadedFile:
     return UploadedFile(name="flyer.pdf", data=_make_pdf(pages=1))
