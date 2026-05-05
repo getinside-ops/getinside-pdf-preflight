@@ -37,6 +37,8 @@ LUCIDE_ICONS: dict[str, str] = {
     "upload": '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
     "maximize_2": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>',
     "settings": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 1 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+    "file_text": '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+    "alert_circle": '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
 }
 
 
@@ -194,7 +196,7 @@ def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
     sections: list[str] = []
 
     # Section: Fichier
-    file_items = [f"📄 {escape(doc_name)}", f"📊 {document.page_count} page{'s' if document.page_count > 1 else ''}"]
+    file_items = [f"{_lucide_icon('file_text', 14)} {escape(doc_name)}", f"{document.page_count} page{'s' if document.page_count > 1 else ''}"]
     sections.append(f"<div><span style='color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px'>Fichier</span><div style='font-size:13px;color:#111827;margin-top:4px'>{' · '.join(file_items)}</div></div>")
 
     # Section: QR Code
@@ -230,7 +232,7 @@ def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
         software = meta.creator or meta.producer
         if software:
             warn_color = "#d97706" if flag == "suspicious" else "#6b7280"
-            warn_icon = "⚠️" if flag == "suspicious" else ""
+            warn_icon = _lucide_icon("alert_circle", 13) if flag == "suspicious" else ""
             meta_parts.append(f"<span style='color:{warn_color}'>{warn_icon} {escape(software)}</span>")
         
         # Dates
