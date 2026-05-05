@@ -83,6 +83,7 @@ def run_all_checks(
     results.extend(check_font_embedding(document))
     results.extend(check_linked_images(document))
     results.extend(check_spot_colors(document))
+    results.extend(check_page_boxes(document))
 
     document_text = all_text(document)
 
@@ -119,6 +120,7 @@ def run_all_checks_with_extraction(
     results.extend(check_font_embedding(document))
     results.extend(check_linked_images(document))
     results.extend(check_spot_colors(document))
+    results.extend(check_page_boxes(document))
 
     page_texts = extract_document_text(document)
     document_text = all_text(document)

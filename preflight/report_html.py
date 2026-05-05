@@ -22,6 +22,7 @@ _CHECK_META: dict[str, tuple[str, str]] = {
     "font_embedding": ("", "POLICES"),
     "linked_images": ("", "IMAGES"),
     "spot_colors": ("", "COULEURS SPOT"),
+    "page_boxes":  ("", "PAGE BOXES"),
 }
 _CHECK_ORDER = list(_CHECK_META.keys())
 
