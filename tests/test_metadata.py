@@ -1,10 +1,17 @@
 """Tests for preflight/metadata.py."""
 from __future__ import annotations
 
+import io
+
+import fitz
+from PIL import Image
+
+from preflight.document import Document, ImagePage, UploadedFile
 from preflight.metadata import (
     DocumentMetadata,
     _parse_pdf_date,
     _parse_pdf_x_from_xmp,
+    extract_metadata,
     software_flag,
 )
 
@@ -114,12 +121,6 @@ def test_flag_case_insensitive():
 
 
 # --- extract_metadata ---
-
-import io
-import fitz
-from PIL import Image
-from preflight.document import Document, ImagePage, UploadedFile
-from preflight.metadata import extract_metadata
 
 
 def _pdf_with_meta(creator: str = "", producer: str = "", creation_date: str = "") -> bytes:

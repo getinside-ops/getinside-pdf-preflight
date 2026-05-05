@@ -166,6 +166,9 @@ class ImagePage(Page):
             "1": "GRAY",
         }.get(mode, mode.upper())  # type: ignore[return-value]
 
+    def color_mode(self) -> str:
+        return self._image.mode
+
     def file_format(self) -> str:
         suffix = Path(self.filename).suffix.lower().lstrip(".")
         if suffix in {"jpg", "jpeg"}:

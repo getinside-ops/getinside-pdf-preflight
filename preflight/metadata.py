@@ -116,7 +116,7 @@ def extract_metadata(document: "Document") -> DocumentMetadata:  # type: ignore[
             dpi = page.dpi()
             return DocumentMetadata(
                 file_format=page.file_format().upper(),
-                color_mode=page._image.mode,
+                color_mode=page.color_mode(),
                 dpi=str(int(dpi)) if dpi else None,
             )
 
