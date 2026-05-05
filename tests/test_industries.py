@@ -1,4 +1,4 @@
-from preflight.industries import INDUSTRIES, INDUSTRY_NAMES, get_industry
+from preflight.industries import INDUSTRIES, INDUSTRY_NAMES, get_industry, detect_industry
 
 
 EXPECTED = {
@@ -53,3 +53,41 @@ def test_automobiles_has_co2_regex():
 def test_unknown_industry_falls_back_to_general():
     rule = get_industry("Inexistante")
     assert rule.name == "Général"
+
+
+# --- detect_industry tests ---
+
+def test_detect_industry_alcool_keyword_hits():
+    text = "Profitez de notre sélection de vins, champagne et whisky pour vos fêtes."
+    name, confidence = detect_industry(text)
+    assert name == "Alcool"
+    assert confidence > 0
+
+
+def test_detect_industry_general_fallback_no_match():
+    text = "Bienvenue dans notre magasin. Venez découvrir nos produits du quotidien."
+    name, confidence = detect_industry(text)
+    assert name == "Général"
+    assert confidence == 0.0
+
+
+def test_detect_industry_confidence_capped_at_one():
+    # Feed many alcool keywords — confidence must not exceed 1.0
+    text = "alcool biere vin whisky champagne spiritueux brasserie cognac cidre rhum vodka calvados aperitif liqueur"
+    name, confidence = detect_industry(text)
+    assert name == "Alcool"
+    assert confidence == 1.0
+
+
+def test_detect_industry_automobiles():
+    text = "Découvrez notre nouvelle berline hybride. Test de conduite disponible."
+    name, confidence = detect_industry(text)
+    assert name == "Automobiles"
+    assert confidence > 0
+
+
+def test_detect_industry_returns_best_match():
+    # Mostly assurance keywords, one voiture keyword — should pick Assurances
+    text = "assurance garantie sinistre prime cotisation couverture voiture"
+    name, confidence = detect_industry(text)
+    assert name == "Assurances"
