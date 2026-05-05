@@ -120,6 +120,16 @@ def test_flag_case_insensitive():
     assert software_flag(meta) == "suspicious"
 
 
+def test_flag_no_false_positive_word_in_name():
+    meta = DocumentMetadata(creator="Crossword Publisher Pro")
+    assert software_flag(meta) == "unknown"
+
+
+def test_flag_no_false_positive_excel_in_name():
+    meta = DocumentMetadata(creator="Excellence Publishing Suite")
+    assert software_flag(meta) == "unknown"
+
+
 # --- extract_metadata ---
 
 

@@ -73,16 +73,16 @@ def _parse_pdf_x_from_xmp(xmp: str) -> str | None:
 
 
 def software_flag(metadata: DocumentMetadata) -> Literal["professional", "suspicious", "unknown"]:
-    """Classify authoring software. Creator field takes precedence over producer."""
+    """Classify authoring software. Creator is checked first; if it yields a classification, producer is not consulted."""
     for field_val in (metadata.creator, metadata.producer):
         if not field_val:
             continue
         lower = field_val.lower()
         for term in _SUSPICIOUS:
-            if term in lower:
+            if re.search(r"\b" + re.escape(term) + r"\b", lower):
                 return "suspicious"
         for term in _PROFESSIONAL:
-            if term in lower:
+            if re.search(r"\b" + re.escape(term) + r"\b", lower):
                 return "professional"
     return "unknown"
 
