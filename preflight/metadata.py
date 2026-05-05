@@ -85,3 +85,46 @@ def software_flag(metadata: DocumentMetadata) -> Literal["professional", "suspic
             if term in lower:
                 return "professional"
     return "unknown"
+
+
+def extract_metadata(document: "Document") -> DocumentMetadata:  # type: ignore[name-defined]
+    """Extract metadata from a Document (PDF or image)."""
+    from preflight.document import ImagePage  # local import avoids circular dep at module level
+
+    if document.kind == "pdf" and document._fitz_doc is not None:
+        fitz_doc = document._fitz_doc
+        raw = fitz_doc.metadata or {}
+
+        try:
+            xmp = fitz_doc.get_xml_metadata() or ""
+        except Exception:
+            xmp = ""
+
+        return DocumentMetadata(
+            pdf_version=raw.get("format") or None,
+            pdf_x=_parse_pdf_x_from_xmp(xmp),
+            creator=raw.get("creator") or None,
+            producer=raw.get("producer") or None,
+            creation_date=_parse_pdf_date(raw.get("creationDate")),
+            mod_date=_parse_pdf_date(raw.get("modDate")),
+        )
+
+    # Image document — use first page
+    if document.pages:
+        page = document.pages[0]
+        if isinstance(page, ImagePage):
+            dpi = page.dpi()
+            return DocumentMetadata(
+                file_format=page.file_format().upper(),
+                color_mode=page._image.mode,
+                dpi=str(int(dpi)) if dpi else None,
+            )
+
+    return DocumentMetadata()
+
+
+__all__ = [
+    "DocumentMetadata",
+    "extract_metadata",
+    "software_flag",
+]

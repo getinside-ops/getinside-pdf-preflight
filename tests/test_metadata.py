@@ -111,3 +111,88 @@ def test_flag_both_none():
 def test_flag_case_insensitive():
     meta = DocumentMetadata(creator="MICROSOFT WORD 365")
     assert software_flag(meta) == "suspicious"
+
+
+# --- extract_metadata ---
+
+import io
+import fitz
+from PIL import Image
+from preflight.document import Document, ImagePage, UploadedFile
+from preflight.metadata import extract_metadata
+
+
+def _pdf_with_meta(creator: str = "", producer: str = "", creation_date: str = "") -> bytes:
+    doc = fitz.open()
+    doc.new_page()
+    doc.set_metadata({
+        "creator": creator,
+        "producer": producer,
+        "creationDate": creation_date,
+    })
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()
+
+
+def _png_bytes(mode: str = "RGB", dpi: int = 300) -> bytes:
+    img = Image.new(mode, (100, 100), color="white" if mode != "CMYK" else (0, 0, 0, 0))
+    out = io.BytesIO()
+    img.save(out, format="PNG", dpi=(dpi, dpi))
+    return out.getvalue()
+
+
+def _jpeg_bytes(mode: str = "CMYK", dpi: int = 300) -> bytes:
+    img = Image.new(mode, (100, 100), color=(0, 0, 0, 0) if mode == "CMYK" else "white")
+    out = io.BytesIO()
+    img.save(out, format="JPEG", dpi=(dpi, dpi))
+    return out.getvalue()
+
+
+def test_extract_pdf_creator_and_version():
+    data = _pdf_with_meta(creator="Adobe InDesign 2024", producer="Adobe PDF Library 16.0")
+    doc = Document.from_upload([UploadedFile(name="x.pdf", data=data)])
+    meta = extract_metadata(doc)
+    assert meta.creator == "Adobe InDesign 2024"
+    assert meta.producer == "Adobe PDF Library 16.0"
+    assert meta.pdf_version is not None and "PDF" in meta.pdf_version
+
+
+def test_extract_pdf_date_parsed():
+    data = _pdf_with_meta(creation_date="D:20241205143022+01'00'")
+    doc = Document.from_upload([UploadedFile(name="x.pdf", data=data)])
+    meta = extract_metadata(doc)
+    assert meta.creation_date == "05/12/2024"
+
+
+def test_extract_pdf_no_pdfx_by_default():
+    data = _pdf_with_meta()
+    doc = Document.from_upload([UploadedFile(name="x.pdf", data=data)])
+    meta = extract_metadata(doc)
+    assert meta.pdf_x is None
+
+
+def test_extract_empty_creator_becomes_none():
+    data = _pdf_with_meta(creator="")
+    doc = Document.from_upload([UploadedFile(name="x.pdf", data=data)])
+    meta = extract_metadata(doc)
+    assert meta.creator is None
+
+
+def test_extract_png_image():
+    data = _png_bytes(mode="RGB", dpi=300)
+    doc = Document.from_upload([UploadedFile(name="img.png", data=data)])
+    meta = extract_metadata(doc)
+    assert meta.file_format == "PNG"
+    assert meta.color_mode == "RGB"
+    # PNG DPI may have floating-point rounding; check within 1 DPI
+    assert meta.dpi is not None and abs(int(meta.dpi) - 300) <= 1
+
+
+def test_extract_jpeg_cmyk():
+    data = _jpeg_bytes(mode="CMYK", dpi=150)
+    doc = Document.from_upload([UploadedFile(name="img.jpg", data=data)])
+    meta = extract_metadata(doc)
+    assert meta.file_format == "JPEG"
+    assert meta.color_mode == "CMYK"
+    assert meta.dpi == "150"
