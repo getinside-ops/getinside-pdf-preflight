@@ -16,24 +16,18 @@ from preflight.checks.advertiser import check_advertiser
 from preflight.checks.bleed import check_bleed
 from preflight.checks.colorspace import check_colorspace
 from preflight.checks.contrast import check_contrast
-from preflight.checks.corrupted_objects import check_corrupted_objects
-from preflight.checks.crop_marks import check_crop_marks
 from preflight.checks.dimensions import check_dimensions
 from preflight.checks.font_embedding import check_font_embedding
 from preflight.checks.image_resolution import check_image_resolution
 from preflight.checks.industry import check_industry
-from preflight.checks.linearized import check_linearized
 from preflight.checks.linked_images import check_linked_images
 from preflight.checks.logos import check_logos
 from preflight.checks.offer import check_offer
-from preflight.checks.optional_content import check_optional_content
-from preflight.checks.overprint import check_overprint
 from preflight.checks.page_boxes import check_page_boxes
 from preflight.checks.printer import check_printer
 from preflight.checks.qrcode import check_qr
 from preflight.checks.spot_colors import check_spot_colors
 from preflight.checks.transparency import check_transparency
-from preflight.checks.qrcode import check_qr
 from preflight.document import Document
 from preflight.extract import OCR_SETTINGS, OcrSettings, PageText, all_text, extract_document_text
 from preflight.formats import FormatSpec
