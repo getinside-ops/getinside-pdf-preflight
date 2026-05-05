@@ -268,99 +268,90 @@ def _render_html_report(results, context: CheckContext) -> None:
 
 
 def _display_analysis_results(document, results, context, extraction_info, doc_name) -> None:
-    n_pages = len(document.pages)
-    thumb_cols = st.columns(n_pages + (4 - n_pages))
-    for col, page in zip(thumb_cols, document.pages):
-        with col:
+    col_left, col_right = st.columns([4, 6])
+
+    with col_left:
+        # --- Page thumbnails ---
+        for page in document.pages:
             st.caption(f"Page {page.index + 1} — {page.source.upper()}")
             try:
                 preview = page.render(dpi=72) if page.source == "pdf" else page.render()
-                wrapper = st.container()
-                with wrapper:
-                    st.image(preview, use_container_width=True)
-                    col_btn1, col_btn2 = st.columns([1, 4])
-                    with col_btn2:
-                        if st.button("🔍", key=f"view_page_{page.index}", help="Agrandir cette page"):
-                            st.session_state[f"show_page_{page.index}"] = True
+                st.image(preview, use_container_width=True)
+                if st.button("Agrandir", key=f"view_page_{page.index}"):
+                    st.session_state[f"show_page_{page.index}"] = True
             except Exception as exc:
                 st.caption(f"Aperçu indisponible : {exc}")
 
-    for page_idx in range(n_pages):
-        if st.session_state.get(f"show_page_{page_idx}", False):
-            with st.expander(f"Page {page_idx + 1} (plein format)", expanded=True):
-                try:
-                    page = document.pages[page_idx]
-                    full_img = page.render(dpi=300)
-                    st.image(full_img, use_container_width=True)
-                except Exception as exc:
-                    st.error(f"Impossible d'afficher : {exc}")
-            if st.button("Fermer", key=f"close_page_{page_idx}"):
-                st.session_state[f"show_page_{page_idx}"] = False
-                st.rerun()
+        # --- Full-page expanders ---
+        for page_idx in range(len(document.pages)):
+            if st.session_state.get(f"show_page_{page_idx}", False):
+                with st.expander(f"Page {page_idx + 1} (plein format)", expanded=True):
+                    try:
+                        full_img = document.pages[page_idx].render(dpi=300)
+                        st.image(full_img, use_container_width=True)
+                    except Exception as exc:
+                        st.error(f"Impossible d'afficher : {exc}")
+                if st.button("Fermer", key=f"close_page_{page_idx}"):
+                    st.session_state[f"show_page_{page_idx}"] = False
+                    st.rerun()
 
-    _render_key_info_banner(doc_name, results, document)
+        # --- Metadata card ---
+        _render_key_info_banner(doc_name, results, document)
 
-    counts = summarize(results)
-    verdict = overall_verdict(results)
-    e = counts.get("error", 0)
-    w = counts.get("warning", 0)
-    i = counts.get("info", 0)
-    if verdict == "fail":
-        bg = "#fee2e2"
-        icon = _lucide_icon("x_circle")
-        color = "#dc2626"
-        main = f"{icon} <b>✕ {e} erreur{'s' if e > 1 else ''}</b>"
-        if w:
-            main += f" · ⚠️ {w} avertissement{'s' if w > 1 else ''}"
-    elif verdict == "review":
-        bg = "#fef3c7"
-        icon = _lucide_icon("alert_triangle")
-        color = "#92400e"
-        main = f"{icon} <b>⚠️ {w} avertissement{'s' if w > 1 else ''}</b>"
-    else:
-        bg = "#dcfce7"
-        icon = _lucide_icon("check_circle")
-        color = "#166534"
-        main = f"{icon} <b>✓ Conforme</b> — prêt pour l'impression"
-
-    st.markdown(
-        f"<div style='background:{bg};border-radius:8px;padding:12px 16px;margin-bottom:12px'>"
-        f"<span style='color:{color};font-size:14px'>{main}</span>"
-        f"<span style='color:#6b7280;font-size:13px'>  ·  ℹ️ {i} infos</span>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-
-    _render_html_report(results, context)
-
-    st.divider()
-
-    ext_info = extraction_info
-    if ext_info:
-        with st.expander("🔧 Détails techniques (OCR)"):
-            st.markdown("**Paramètres OCR utilisés:**")
-            st.markdown(f"- **DPI:** {ext_info.ocr_settings.dpi}")
-            st.markdown(f"- **Langue:** {ext_info.ocr_settings.lang}")
-            st.markdown(f"- **Config:** `{ext_info.ocr_settings.config}`")
-            st.markdown(f"- **Prétraitement:** {', '.join(ext_info.ocr_settings.preprocessing)}")
-
-            st.markdown("---")
-            st.markdown("**Texte détecté par page:**")
-
-            for pt in ext_info.pages:
-                st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
-                if pt.text.strip():
-                    with st.container():
+        # --- OCR details ---
+        if extraction_info:
+            with st.expander("Détails techniques (OCR)"):
+                st.markdown("**Paramètres OCR utilisés:**")
+                st.markdown(f"- **DPI:** {extraction_info.ocr_settings.dpi}")
+                st.markdown(f"- **Langue:** {extraction_info.ocr_settings.lang}")
+                st.markdown(f"- **Config:** `{extraction_info.ocr_settings.config}`")
+                st.markdown(f"- **Prétraitement:** {', '.join(extraction_info.ocr_settings.preprocessing)}")
+                st.markdown("---")
+                st.markdown("**Texte détecté par page:**")
+                for pt in extraction_info.pages:
+                    st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
+                    if pt.text.strip():
                         st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
-                else:
-                    st.caption("(aucun texte détecté)")
+                    else:
+                        st.caption("(aucun texte détecté)")
+                st.markdown("---")
+                st.markdown("**Texte complet concaténé:**")
+                st.code(extraction_info.text_used[:3000] + ("..." if len(extraction_info.text_used) > 3000 else ""), language=None)
 
-            st.markdown("---")
-            st.markdown("**Texte complet concaténé:**")
-            with st.container():
-                st.code(ext_info.text_used[:3000] + ("..." if len(ext_info.text_used) > 3000 else ""), language=None)
-    else:
-        st.warning("Aucune donnée d'extraction disponible.")
+    with col_right:
+        # --- Verdict banner ---
+        counts = summarize(results)
+        verdict = overall_verdict(results)
+        e = counts.get("error", 0)
+        w = counts.get("warning", 0)
+        i = counts.get("info", 0)
+
+        if verdict == "fail":
+            bg, color = "#fee2e2", "#dc2626"
+            icon = _lucide_icon("x_circle")
+            main = f"{icon} <b>{e} erreur{'s' if e > 1 else ''}</b>"
+            if w:
+                main += f" &nbsp;·&nbsp; {_lucide_icon('alert_triangle')} {w} avertissement{'s' if w > 1 else ''}"
+        elif verdict == "review":
+            bg, color = "#fef3c7", "#92400e"
+            icon = _lucide_icon("alert_triangle")
+            main = f"{icon} <b>{w} avertissement{'s' if w > 1 else ''}</b>"
+        else:
+            bg, color = "#dcfce7", "#166534"
+            icon = _lucide_icon("check_circle")
+            main = f"{icon} <b>Conforme</b> — prêt pour l'impression"
+
+        st.markdown(
+            f"<div style='background:{bg};border-radius:8px;padding:12px 16px;margin-bottom:12px'>"
+            f"<span style='color:{color};font-size:14px'>{main}</span>"
+            f"<span style='color:#6b7280;font-size:13px'>"
+            f"&nbsp;&nbsp;·&nbsp;&nbsp;{_lucide_icon('info')} {i} info{'s' if i > 1 else ''}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+        # --- Check cards ---
+        _render_html_report(results, context)
 
 
 # ---------- Run ---------------------------------------------------------------
@@ -428,4 +419,4 @@ if display_results and document is not None:
     _display_analysis_results(document, results, context, extraction_info, doc_name)
 
 elif not uploaded and not has_stored_results:
-    st.caption("📥 Déposez un PDF (1-2 pages) ou jusqu'à 2 images PNG/JPEG.")
+    st.caption("Déposez un PDF (1-2 pages) ou jusqu'à 2 images PNG/JPEG.")
