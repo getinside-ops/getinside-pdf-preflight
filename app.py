@@ -16,6 +16,7 @@ from preflight.pipeline import (
 )
 from preflight.checks import Severity
 from preflight.logos import LogoLibrary
+from preflight.metadata import extract_metadata, software_flag
 
 st.set_page_config(
     page_title="Print Preflight · Getinside",
@@ -166,6 +167,52 @@ def _verdict_banner(verdict: str, counts: dict) -> None:
         st.success(f"✅ **Conforme** — prêt pour l'impression  ·  ℹ️ {i} infos")
 
 
+def _render_metadata(document: Document) -> None:
+    meta = extract_metadata(document)
+    flag = software_flag(meta)
+    parts: list[str] = []
+
+    if document.kind == "pdf":
+        if meta.pdf_version:
+            parts.append(f"<span style='color:#374151'>📄 {meta.pdf_version}</span>")
+
+        if meta.pdf_x:
+            parts.append(f"<span style='color:#16a34a;font-weight:600'>✅ {meta.pdf_x}</span>")
+        else:
+            parts.append("<span style='color:#d97706;font-weight:600'>⚠️ Non PDF/X</span>")
+
+        software_name = meta.creator or meta.producer
+        if software_name:
+            if flag == "suspicious":
+                parts.append(
+                    f"<span style='color:#d97706;font-weight:600'>⚠️ {software_name}</span>"
+                )
+            else:
+                parts.append(f"<span style='color:#6b7280'>✏️ {software_name}</span>")
+
+        if meta.creation_date:
+            parts.append(f"<span style='color:#6b7280'>📅 {meta.creation_date}</span>")
+
+    else:  # image
+        if meta.file_format:
+            parts.append(f"<span style='color:#374151'>📄 {meta.file_format}</span>")
+        if meta.color_mode:
+            parts.append(f"<span style='color:#374151'>🎨 {meta.color_mode}</span>")
+        if meta.dpi:
+            parts.append(f"<span style='color:#374151'>🖨️ {meta.dpi} DPI</span>")
+
+    if not parts:
+        return
+
+    sep = "<span style='color:#d1d5db'>&nbsp;·&nbsp;</span>"
+    st.markdown(
+        "<div style='border:1px solid #e5e7eb;background:#f9fafb;"
+        "border-radius:10px;padding:8px 14px;margin-bottom:12px;"
+        f"font-size:12px;line-height:1.8'>{sep.join(parts)}</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def _render_results(results) -> None:
     counts = summarize(results)
     verdict = overall_verdict(results)
@@ -244,6 +291,7 @@ if run_button and uploaded:
     with st.spinner("Analyse en cours…"):
         results = run_all_checks(document, context, logo_library=library)
 
+    _render_metadata(document)
     _render_results(results)
 
     with st.expander("Aperçu des pages", expanded=False):
