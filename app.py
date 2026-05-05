@@ -224,7 +224,7 @@ def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
         if meta.pdf_x:
             pdfx_color = "#16a34a" if meta.pdf_x else "#d97706"
             pdfx_text = meta.pdf_x if meta.pdf_x else "Non conforme"
-            meta_parts.append(f"<span style='color:{pdfx_color};font-weight:600'>{pdfx_text}</span>")
+            meta_parts.append(f"<span style='color:{pdfx_color};font-weight:600'>{escape(pdfx_text)}</span>")
         elif meta.pdf_version:
             meta_parts.append(f"<span style='color:#d97706'>PDF/X: Non conforme</span>")
         
