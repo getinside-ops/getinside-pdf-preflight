@@ -32,6 +32,18 @@ _SEV_COLORS: dict[Severity, tuple[str, str]] = {
     Severity.INFO:    ("#6b7280", "#9ca3af"),
 }
 
+_SEV_BORDER: dict[Severity, str] = {
+    Severity.ERROR:   "#dc2626",
+    Severity.WARNING: "#d97706",
+    Severity.INFO:    "#16a34a",
+}
+
+_SEV_PILL: dict[Severity, tuple[str, str]] = {
+    Severity.ERROR:   ("#fee2e2", "#dc2626"),
+    Severity.WARNING: ("#fef3c7", "#92400e"),
+    Severity.INFO:    ("#dcfce7", "#166534"),
+}
+
 
 def _group_worst(items: list[CheckResult]) -> Severity:
     if any(r.severity is Severity.ERROR for r in items):
@@ -74,7 +86,7 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
 
     parts: list[str] = [
         "<div style='border:1px solid #e5e7eb;background:#f9fafb;border-radius:8px;"
-        "padding:10px 14px;margin-bottom:8px;"
+        "padding:10px 14px;margin-bottom:12px;"
         "font-family:Inter,ui-sans-serif,system-ui,sans-serif;"
         f"font-size:12px;color:#6b7280'>{header}</div>",
         "<div style='font-family:Inter,ui-sans-serif,system-ui,sans-serif'>",
@@ -89,26 +101,37 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
         + [k for k in groups if k not in _CHECK_ORDER]
     )
 
-    for i, name in enumerate(ordered_keys):
+    for name in ordered_keys:
         items = groups[name]
         worst = _group_worst(items)
-        icon, label = _CHECK_META.get(name, ("•", name.upper()))
+        _, label = _CHECK_META.get(name, ("", name.upper()))
 
         e_count = sum(1 for r in items if r.severity is Severity.ERROR)
         w_count = sum(1 for r in items if r.severity is Severity.WARNING)
 
-        if worst is Severity.ERROR:
-            status = f"[ERROR] {e_count} erreur{'s' if e_count > 1 else ''}"
-        elif worst is Severity.WARNING:
-            status = f"[WARNING] {w_count} avertissement{'s' if w_count > 1 else ''}"
-        else:
-            status = "[OK]"
+        border_color = _SEV_BORDER[worst]
+        pill_bg, pill_fg = _SEV_PILL[worst]
+        open_attr = " open" if worst is not Severity.INFO else ""
 
-        mt = "margin-top:10px;border-top:1px solid #f3f4f6;padding-top:10px" if i > 0 else ""
+        if worst is Severity.ERROR:
+            pill_text = f"{e_count} erreur{'s' if e_count > 1 else ''}"
+        elif worst is Severity.WARNING:
+            pill_text = f"{w_count} avertissement{'s' if w_count > 1 else ''}"
+        else:
+            pill_text = "OK"
+
         parts.append(
-            f"<div style='{mt}'>"
-            f"<div style='font-size:13px;font-weight:600;color:#111827;margin-bottom:4px'>"
-            f"{icon} {escape(label)} — {status}</div>"
+            f"<div style='margin-bottom:8px;border:1px solid #e5e7eb;"
+            f"border-left:3px solid {border_color};border-radius:8px;overflow:hidden'>"
+            f"<details{open_attr}>"
+            f"<summary style='cursor:pointer;padding:10px 14px;background:#f9fafb;"
+            f"font-size:13px;font-weight:600;color:#111827;list-style:none;"
+            f"display:flex;align-items:center;justify-content:space-between'>"
+            f"<span>{escape(label)}</span>"
+            f"<span style='background:{pill_bg};color:{pill_fg};font-size:11px;"
+            f"font-weight:600;padding:2px 8px;border-radius:4px'>{pill_text}</span>"
+            f"</summary>"
+            f"<div style='padding:8px 14px'>"
         )
 
         for r in items:
@@ -130,7 +153,7 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
                         f"{escape(k)}: {escape(_fmt_detail_value(v))}</div>"
                     )
             parts.append(
-                f"<div style='padding-left:16px;font-size:12.5px;line-height:1.6'>"
+                f"<div style='padding:4px 0;font-size:12.5px;line-height:1.6'>"
                 f"<span style='color:{dot_color}'>·</span> "
                 f"{page_badge}"
                 f"<span style='color:{text_color}'>{escape(formatted_msg)}</span>"
@@ -138,7 +161,7 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
                 f"{detail_lines}"
             )
 
-        parts.append("</div>")
+        parts.append("</div></details></div>")
 
     parts.append("</div>")
     return "\n".join(parts)
