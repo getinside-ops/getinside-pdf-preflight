@@ -19,6 +19,7 @@ from preflight.pipeline import (
 from preflight.checks import Severity
 from preflight.logos import LogoLibrary
 from preflight.metadata import extract_metadata, software_flag
+from preflight.report_html import build_html_report
 
 st.set_page_config(
     page_title="Print Preflight · Getinside",
@@ -77,27 +78,6 @@ run_button = st.button(
     disabled=not uploaded,
 )
 
-# ---------- Check metadata (display order + labels) ---------------------------
-
-_CHECK_META: dict[str, tuple[str, str]] = {
-    "dimensions": ("📐", "DIMENSIONS"),
-    "colorspace":  ("🎨", "COULEURS"),
-    "qrcode":      ("📱", "QR CODE"),
-    "logos":       ("🏷️", "LOGOS"),
-    "advertiser":  ("🏢", "ANNONCEUR"),
-    "offer":       ("📅", "OFFRE"),
-    "printer":     ("🖨️", "IMPRIMEUR"),
-    "industry":    ("⚖️", "RÉGLEMENTAIRE"),
-}
-_CHECK_ORDER = list(_CHECK_META.keys())
-
-_SEVERITY_ICON = {
-    Severity.ERROR:   "❌",
-    Severity.WARNING: "⚠️",
-    Severity.INFO:    "✓",
-}
-
-
 # ---------- Helpers -----------------------------------------------------------
 
 
@@ -113,153 +93,6 @@ def _extract_promo_code(results) -> str | None:
         if r.check_name == "offer" and r.details and "code" in r.details:
             return r.details["code"]
     return None
-
-
-def _group_worst(items) -> Severity:
-    if any(r.severity is Severity.ERROR for r in items):
-        return Severity.ERROR
-    if any(r.severity is Severity.WARNING for r in items):
-        return Severity.WARNING
-    return Severity.INFO
-
-
-def _fmt_detail_value(v) -> str:
-    if isinstance(v, (list, tuple)):
-        if len(v) == 2 and all(isinstance(x, (int, float)) for x in v):
-            return f"{v[0]:g} × {v[1]:g} mm"
-        return ", ".join(str(x).strip("'\"") for x in v)
-    if isinstance(v, float):
-        return f"{v:g}"
-    return str(v)
-
-
-def _detail_text(r) -> str:
-    if not r.details:
-        return ""
-    skip = {"threshold", "kind", "expected_contains", "candidates", "data", "code", "date"}
-    parts = [
-        f"{k}: {_fmt_detail_value(v)}"
-        for k, v in r.details.items()
-        if k not in skip
-    ]
-    return "  [" + " · ".join(parts) + "]" if parts else ""
-
-
-def _build_text_report(
-    results,
-    doc_name: str,
-    context: CheckContext,
-    meta_str: str,
-) -> str:
-    counts = summarize(results)
-    verdict = overall_verdict(results)
-    e = counts.get("error", 0)
-    w = counts.get("warning", 0)
-    i = counts.get("info", 0)
-
-    qr_url = _extract_qr_url(results)
-    promo_code = _extract_promo_code(results)
-
-    lines: list[str] = []
-
-    # Header
-    lines.append("=" * 56)
-    lines.append(f"  PREFLIGHT — {doc_name}")
-    lines.append(f"  Format: {context.format_spec.name}  ·  Industrie: {context.industry}  ·  {context.print_method}")
-    if meta_str:
-        lines.append(f"  {meta_str}")
-    lines.append("=" * 56)
-    lines.append("")
-
-    # Verdict
-    if verdict == "fail":
-        v_parts = [f"❌ {e} erreur{'s' if e > 1 else ''}"]
-        if w:
-            v_parts.append(f"⚠️ {w} avertissement{'s' if w > 1 else ''}")
-        v_parts.append(f"ℹ️ {i} infos")
-        lines.append("  RÉSULTAT : " + "  ·  ".join(v_parts))
-    elif verdict == "review":
-        lines.append(f"  RÉSULTAT : ⚠️ {w} avertissement{'s' if w > 1 else ''}  ·  ℹ️ {i} infos")
-    else:
-        lines.append(f"  RÉSULTAT : ✅ Conforme — prêt pour l'impression  ·  ℹ️ {i} infos")
-
-    lines.append("")
-
-    # Key campaign info
-    if qr_url:
-        lines.append(f"  🔗 URL QR   : {qr_url}")
-    if promo_code:
-        lines.append(f"  🎟️  Code promo : {promo_code}  ✅")
-    else:
-        lines.append(f"  🎟️  Code promo : (aucun détecté)")
-
-    lines.append("")
-    lines.append("-" * 56)
-
-    # Group results by check
-    groups: dict[str, list] = {}
-    for r in results:
-        groups.setdefault(r.check_name, []).append(r)
-
-    ordered_keys = (
-        [k for k in _CHECK_ORDER if k in groups]
-        + [k for k in groups if k not in _CHECK_ORDER]
-    )
-
-    for name in ordered_keys:
-        items = groups[name]
-        worst = _group_worst(items)
-        icon, label = _CHECK_META.get(name, ("•", name.upper()))
-
-        e_count = sum(1 for r in items if r.severity is Severity.ERROR)
-        w_count = sum(1 for r in items if r.severity is Severity.WARNING)
-
-        if worst is Severity.ERROR:
-            status = f"❌ {e_count} erreur{'s' if e_count > 1 else ''}"
-        elif worst is Severity.WARNING:
-            status = f"⚠️  {w_count} avertissement{'s' if w_count > 1 else ''}"
-        else:
-            status = "✅"
-
-        lines.append("")
-        lines.append(f"{icon} {label} — {status}")
-
-        for r in items:
-            sev_icon = _SEVERITY_ICON[r.severity]
-            page_tag = f" [p.{r.page + 1}]" if r.page is not None else ""
-            detail = _detail_text(r)
-            lines.append(f"  {sev_icon}{page_tag} {r.message}{detail}")
-
-    lines.append("")
-    lines.append("=" * 56)
-
-    return "\n".join(lines)
-
-
-def _meta_plain(document: Document) -> str:
-    """Return a short one-line metadata string for the text report."""
-    meta = extract_metadata(document)
-    parts: list[str] = []
-    if document.kind == "pdf":
-        if meta.pdf_version:
-            parts.append(meta.pdf_version)
-        if meta.pdf_x:
-            parts.append(meta.pdf_x)
-        else:
-            parts.append("Non PDF/X")
-        software_name = meta.creator or meta.producer
-        if software_name:
-            parts.append(software_name)
-        if meta.creation_date:
-            parts.append(meta.creation_date)
-    else:
-        if meta.file_format:
-            parts.append(meta.file_format)
-        if meta.color_mode:
-            parts.append(meta.color_mode)
-        if meta.dpi:
-            parts.append(f"{meta.dpi} DPI")
-    return "  ·  ".join(parts)
 
 
 def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
@@ -322,6 +155,10 @@ def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
     )
 
 
+def _render_html_report(results, context: CheckContext) -> None:
+    st.markdown(build_html_report(results, context), unsafe_allow_html=True)
+
+
 # ---------- Run ---------------------------------------------------------------
 
 if run_button and uploaded:
@@ -376,10 +213,8 @@ if run_button and uploaded:
     else:
         st.success(f"✅ **Conforme** — prêt pour l'impression  ·  ℹ️ {i} infos")
 
-    # 4. Single copyable text report
-    meta_str = _meta_plain(document)
-    report = _build_text_report(results, doc_name, context, meta_str)
-    st.code(report, language=None)
+    # 4. HTML report
+    _render_html_report(results, context)
 
 elif not uploaded:
     st.caption("📥 Déposez un PDF (1-2 pages) ou jusqu'à 2 images PNG/JPEG.")
