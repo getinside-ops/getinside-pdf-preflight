@@ -36,7 +36,8 @@ LUCIDE_ICONS = {
 
 
 def _lucide_icon(name: str) -> str:
-    return LUCIDE_ICONS.get(name, "")
+    icon = LUCIDE_ICONS.get(name, "")
+    return f'<span style="display:inline-flex;vertical-align:middle">{icon}</span>'
 
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -142,7 +143,8 @@ LUCIDE_ICONS = {
 
 
 def _lucide_icon(name: str) -> str:
-    return LUCIDE_ICONS.get(name, "")
+    icon = LUCIDE_ICONS.get(name, "")
+    return f'<span style="display:inline-flex;vertical-align:middle">{icon}</span>'
 
 
 def _extract_qr_url(results) -> str | None:
@@ -166,55 +168,74 @@ def _render_key_info_banner(doc_name: str, results, document: Document) -> None:
     qr_url = _extract_qr_url(results)
     promo_code = _extract_promo_code(results)
 
-    # Build metadata chips
-    chips: list[str] = []
-    if document.kind == "pdf":
-        if meta.pdf_version:
-            chips.append(f"<span style='color:#374151'>PDF: {escape(meta.pdf_version)}</span>")
-        if meta.pdf_x:
-            chips.append(f"<span style='color:#16a34a;font-weight:600'>PDF/X: {escape(meta.pdf_x)}</span>")
-        else:
-            chips.append("<span style='color:#d97706;font-weight:600'>PDF/X: Non conforme</span>")
-        software_name = meta.creator or meta.producer
-        if software_name:
-            color = "#d97706" if flag == "suspicious" else "#6b7280"
-            prefix = "⚠️" if flag == "suspicious" else "Créé avec: "
-            chips.append(f"<span style='color:{color};font-weight:{'600' if flag == 'suspicious' else 'normal'}'>{prefix}{escape(software_name)}</span>")
-        if meta.creation_date:
-            chips.append(f"<span style='color:#6b7280'>Créé le: {escape(meta.creation_date)}</span>")
-    else:
-        if meta.file_format:
-            chips.append(f"<span style='color:#374151'>Format: {escape(meta.file_format)}</span>")
-        if meta.color_mode:
-            chips.append(f"<span style='color:#374151'>Couleur: {escape(meta.color_mode)}</span>")
-        if meta.dpi:
-            chips.append(f"<span style='color:#374151'>DPI: {escape(meta.dpi)}</span>")
+    sections: list[str] = []
 
-    sep = "<span style='color:#d1d5db'>&nbsp;·&nbsp;</span>"
-    meta_html = sep.join(chips) if chips else ""
+    # Section: Fichier
+    file_items = [f"📄 {escape(doc_name)}", f"📊 {document.page_count} page{'s' if document.page_count > 1 else ''}"]
+    sections.append(f"<div><span style='color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px'>Fichier</span><div style='font-size:13px;color:#111827;margin-top:4px'>{' · '.join(file_items)}</div></div>")
 
-    # QR URL
+    # Section: QR Code
     if qr_url:
-        short = qr_url if len(qr_url) <= 60 else qr_url[:57] + "…"
-        url_html = f'<a href="{escape(qr_url)}" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none">QR: {escape(short)}</a>'
+        short = qr_url if len(qr_url) <= 50 else qr_url[:47] + "…"
+        qr_section = f"<a href='{escape(qr_url)}' target='_blank' style='color:#2563eb;text-decoration:none;font-weight:500'>{escape(short)} ↗</a>"
     else:
-        url_html = "<span style='color:#9ca3af'>QR: Aucune URL détectée</span>"
+        qr_section = "<span style='color:#9ca3af'>Non détecté</span>"
+    sections.append(f"<div><span style='color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px'>QR Code</span><div style='font-size:13px;margin-top:4px'>{qr_section}</div></div>")
 
-    # Promo code
+    # Section: Code promo
     if promo_code:
-        promo_html = f"<span style='background:#dcfce7;color:#166534;font-weight:700;padding:2px 8px;border-radius:4px;font-size:12px'>Code: {escape(promo_code)}</span>"
+        promo_section = f"<span style='background:#dcfce7;color:#166534;font-weight:600;padding:2px 8px;border-radius:4px;font-size:12px'>{escape(promo_code)}</span>"
     else:
-        promo_html = "<span style='color:#9ca3af;font-size:12px'>Code: Aucun</span>"
+        promo_section = "<span style='color:#9ca3af'>Non détecté</span>"
+    sections.append(f"<div><span style='color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px'>Code Promo</span><div style='font-size:13px;margin-top:4px'>{promo_section}</div></div>")
 
+    # Section: Métadonnées PDF/Image
+    if document.kind == "pdf":
+        meta_parts = []
+        
+        # PDF version and PDF/X
+        if meta.pdf_version:
+            meta_parts.append(f"PDF v{meta.pdf_version}")
+        if meta.pdf_x:
+            pdfx_color = "#16a34a" if meta.pdf_x else "#d97706"
+            pdfx_text = meta.pdf_x if meta.pdf_x else "Non conforme"
+            meta_parts.append(f"<span style='color:{pdfx_color};font-weight:600'>{pdfx_text}</span>")
+        elif meta.pdf_version:
+            meta_parts.append(f"<span style='color:#d97706'>PDF/X: Non conforme</span>")
+        
+        # Software with warning
+        software = meta.creator or meta.producer
+        if software:
+            warn_color = "#d97706" if flag == "suspicious" else "#6b7280"
+            warn_icon = "⚠️" if flag == "suspicious" else ""
+            meta_parts.append(f"<span style='color:{warn_color}'>{warn_icon} {escape(software)}</span>")
+        
+        # Dates
+        if meta.creation_date:
+            meta_parts.append(f"Créé: {escape(meta.creation_date)}")
+        if meta.mod_date:
+            meta_parts.append(f"Modifié: {escape(meta.mod_date)}")
+
+        meta_section = " · ".join(meta_parts) if meta_parts else "<span style='color:#9ca3af'>Aucune</span>"
+        sections.append(f"<div><span style='color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px'>Métadonnées</span><div style='font-size:12px;color:#374151;margin-top:4px'>{meta_section}</div></div>")
+    else:
+        meta_items = []
+        if meta.file_format:
+            meta_items.append(escape(meta.file_format))
+        if meta.color_mode:
+            meta_items.append(escape(meta.color_mode))
+        if meta.dpi:
+            meta_items.append(f"{meta.dpi} DPI")
+
+        meta_section = " · ".join(meta_items) if meta_items else "<span style='color:#9ca3af'>Aucune</span>"
+        sections.append(f"<div><span style='color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px'>Image</span><div style='font-size:12px;color:#374151;margin-top:4px'>{meta_section}</div></div>")
+
+    grid_cols = "grid-template-columns: repeat(4, 1fr)" if len(sections) == 4 else "grid-template-columns: repeat(2, 1fr)"
     st.markdown(
-        f"<div style='border:1px solid #e5e7eb;background:#f9fafb;border-radius:8px;"
-        f"padding:10px 14px;margin-bottom:12px'>"
-        f"<div style='font-size:13px;font-weight:600;color:#111827;margin-bottom:6px'>Fichier: {escape(doc_name)}</div>"
-        f"<div style='display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px'>"
-        f"{url_html}&nbsp;&nbsp;{promo_html}"
-        f"</div>"
-        f"<div style='font-size:11px;line-height:1.6;color:#6b7280'>{meta_html}</div>"
-        f"</div>",
+        f"<div style='border:1px solid #e5e7eb;background:#ffffff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05)'>"
+        f"<div style='display:grid;gap:16px;{grid_cols};flex-wrap:wrap'>"
+        + "".join(f"<div style='padding:8px 12px;background:#f9fafb;border-radius:8px;border:1px solid #f3f4f6'>{s}</div>" for s in sections)
+        + f"</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -223,38 +244,9 @@ def _render_html_report(results, context: CheckContext) -> None:
     st.markdown(build_html_report(results, context), unsafe_allow_html=True)
 
 
-# ---------- Run ---------------------------------------------------------------
-
-if run_button and uploaded:
-    files = [UploadedFile(name=u.name, data=u.read()) for u in uploaded]
-    doc_name = uploaded[0].name
-
-    try:
-        document = Document.from_upload(files)
-    except DocumentError as exc:
-        st.error(str(exc))
-        st.stop()
-
-    context = CheckContext(
-        format_spec=format_spec,
-        industry=industry,
-        print_method=print_method,
-    )
-
-    library = LogoLibrary(LOGO_LIBRARY_ROOT)
-
-    with st.spinner("Analyse en cours…"):
-        results, extraction_info = run_all_checks_with_extraction(
-            document, context, logo_library=library
-        )
-
-    st.session_state["results"] = results
-    st.session_state["extraction_info"] = extraction_info
-    st.session_state["context"] = context
-
-    # 1. Preview at top, always visible, small thumbnails
+def _display_analysis_results(document, results, context, extraction_info, doc_name) -> None:
     n_pages = len(document.pages)
-    thumb_cols = st.columns(n_pages + (4 - n_pages))  # pad so thumbs stay narrow
+    thumb_cols = st.columns(n_pages + (4 - n_pages))
     for col, page in zip(thumb_cols, document.pages):
         with col:
             st.caption(f"Page {page.index + 1} — {page.source.upper()}")
@@ -265,29 +257,26 @@ if run_button and uploaded:
                     st.image(preview, use_container_width=True)
                     col_btn1, col_btn2 = st.columns([1, 4])
                     with col_btn2:
-                        if st.button(_lucide_icon("search"), key=f"view_page_{page.index}", help="Agrandir cette page"):
+                        if st.button("🔍", key=f"view_page_{page.index}", help="Agrandir cette page"):
                             st.session_state[f"show_page_{page.index}"] = True
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:
                 st.caption(f"Aperçu indisponible : {exc}")
 
-    # Handle full-size modal views (check all page indices)
     for page_idx in range(n_pages):
         if st.session_state.get(f"show_page_{page_idx}", False):
-            with st.dialog(f"Page {page_idx + 1}"):
+            with st.expander(f"Page {page_idx + 1} (plein format)", expanded=True):
                 try:
                     page = document.pages[page_idx]
                     full_img = page.render(dpi=300)
                     st.image(full_img, use_container_width=True)
                 except Exception as exc:
                     st.error(f"Impossible d'afficher : {exc}")
-                if st.button("Fermer", key=f"close_page_{page_idx}"):
-                    st.session_state[f"show_page_{page_idx}"] = False
-                    st.rerun()
+            if st.button("Fermer", key=f"close_page_{page_idx}"):
+                st.session_state[f"show_page_{page_idx}"] = False
+                st.rerun()
 
-    # 2. Key info banner (filename, URL, promo code, metadata)
     _render_key_info_banner(doc_name, results, document)
 
-    # 3. Verdict summary
     counts = summarize(results)
     verdict = overall_verdict(results)
     e = counts.get("error", 0)
@@ -319,46 +308,105 @@ if run_button and uploaded:
         unsafe_allow_html=True,
     )
 
-    # 4. HTML report
     _render_html_report(results, context)
 
     st.divider()
 
-    # 5. Debug section (discrete button + modal at bottom)
-    if st.button(_lucide_icon("info"), key="debug_button", help="Afficher les détails techniques (OCR)"):
-        st.session_state["show_debug"] = True
+    ext_info = extraction_info
+    if ext_info:
+        with st.expander("🔧 Détails techniques (OCR)"):
+            st.markdown("**Paramètres OCR utilisés:**")
+            st.markdown(f"- **DPI:** {ext_info.ocr_settings.dpi}")
+            st.markdown(f"- **Langue:** {ext_info.ocr_settings.lang}")
+            st.markdown(f"- **Config:** `{ext_info.ocr_settings.config}`")
+            st.markdown(f"- **Prétraitement:** {', '.join(ext_info.ocr_settings.preprocessing)}")
 
-    if st.session_state.get("show_debug", False):
-        ext_info = st.session_state.get("extraction_info")
-        if ext_info:
-            with st.dialog("🔧 Détails OCR"):
-                st.markdown("**Paramètres OCR utilisés:**")
-                st.markdown(f"- **DPI:** {ext_info.ocr_settings.dpi}")
-                st.markdown(f"- **Langue:** {ext_info.ocr_settings.lang}")
-                st.markdown(f"- **Config:** `{ext_info.ocr_settings.config}`")
-                st.markdown(f"- **Prétraitement:** {', '.join(ext_info.ocr_settings.preprocessing)}")
+            st.markdown("---")
+            st.markdown("**Texte détecté par page:**")
 
-                st.markdown("---")
-                st.markdown("**Texte détecté par page:**")
+            for pt in ext_info.pages:
+                st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
+                if pt.text.strip():
+                    with st.container():
+                        st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
+                else:
+                    st.caption("(aucun texte détecté)")
 
-                for pt in ext_info.pages:
-                    st.markdown(f"**Page {pt.page_index + 1}** — Méthode: `{pt.method.value}`")
-                    if pt.text.strip():
-                        with st.container():
-                            st.code(pt.text.strip()[:2000] + ("..." if len(pt.text.strip()) > 2000 else ""), language=None)
-                    else:
-                        st.caption("(aucun texte détecté)")
+            st.markdown("---")
+            st.markdown("**Texte complet concaténé:**")
+            with st.container():
+                st.code(ext_info.text_used[:3000] + ("..." if len(ext_info.text_used) > 3000 else ""), language=None)
+    else:
+        st.warning("Aucune donnée d'extraction disponible.")
 
-                st.markdown("---")
-                st.markdown("**Texte complet concaténé:**")
-                with st.container():
-                    st.code(ext_info.text_used[:3000] + ("..." if len(ext_info.text_used) > 3000 else ""), language=None)
 
-                if st.button("Fermer", key="close_debug"):
-                    st.session_state["show_debug"] = False
-                    st.rerun()
-        else:
-            st.warning("Aucune donnée d'extraction disponible.")
+# ---------- Run ---------------------------------------------------------------
 
-elif not uploaded:
+# Check if we have stored results to display
+has_stored_results = "results" in st.session_state and "context" in st.session_state
+has_doc_data = "doc_name" in st.session_state and "doc_data" in st.session_state
+
+# Initialize variables for display code
+display_results = False
+document = None
+results = None
+extraction_info = None
+context = None
+doc_name = None
+
+# Run analysis on button click OR restore from session state
+if run_button and uploaded:
+    # Read file data BEFORE storing in session (consumes the BytesIO)
+    file_data = [(u.name, u.read()) for u in uploaded]
+    doc_name = uploaded[0].name
+
+    files = [UploadedFile(name=n, data=d) for n, d in file_data]
+
+    try:
+        document = Document.from_upload(files)
+    except DocumentError as exc:
+        st.error(str(exc))
+        st.stop()
+
+    context = CheckContext(
+        format_spec=format_spec,
+        industry=industry,
+        print_method=print_method,
+    )
+
+    library = LogoLibrary(LOGO_LIBRARY_ROOT)
+
+    with st.spinner("Analyse en cours…"):
+        results, extraction_info = run_all_checks_with_extraction(
+            document, context, logo_library=library
+        )
+
+    st.session_state["results"] = results
+    st.session_state["extraction_info"] = extraction_info
+    st.session_state["context"] = context
+    st.session_state["doc_name"] = doc_name
+    st.session_state["doc_data"] = file_data  # Already read, store for restoration
+    display_results = True
+
+elif has_stored_results and has_doc_data:
+    # Restore from session state instead of using depleted uploaded files
+    files = [UploadedFile(name=n, data=d) for n, d in st.session_state["doc_data"]]
+    doc_name = st.session_state["doc_name"]
+    try:
+        document = Document.from_upload(files)
+    except DocumentError as exc:
+        st.error(str(exc))
+        st.session_state.clear()
+        st.rerun()
+
+    results = st.session_state["results"]
+    context = st.session_state["context"]
+    extraction_info = st.session_state.get("extraction_info")
+    display_results = True
+
+# Display results if analysis was run (either now or from session state)
+if display_results and document is not None:
+    _display_analysis_results(document, results, context, extraction_info, doc_name)
+
+elif not uploaded and not has_stored_results:
     st.caption("📥 Déposez un PDF (1-2 pages) ou jusqu'à 2 images PNG/JPEG.")

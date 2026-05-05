@@ -19,6 +19,9 @@ _CHECK_META: dict[str, tuple[str, str]] = {
     "printer":     ("", "IMPRIMEUR"),
     "contrast":    ("", "CONTRASTE"),
     "industry":    ("", "RÉGLEMENTAIRE"),
+    "font_embedding": ("", "POLICES"),
+    "linked_images": ("", "IMAGES"),
+    "spot_colors": ("", "COULEURS SPOT"),
 }
 _CHECK_ORDER = list(_CHECK_META.keys())
 
@@ -47,16 +50,17 @@ def _fmt_detail_value(v: object) -> str:
     return str(v)
 
 
-def _detail_text(r: CheckResult) -> str:
-    if not r.details:
-        return ""
-    skip = {"threshold", "kind", "expected_contains", "candidates", "data", "code", "date"}
-    parts = [
-        f"{k}: {_fmt_detail_value(v)}"
-        for k, v in r.details.items()
-        if k not in skip
-    ]
-    return "  [" + " · ".join(parts) + "]" if parts else ""
+def _format_message(r: CheckResult) -> str:
+    """Format message, including key details inline instead of in brackets."""
+    msg = r.message
+    
+    # Add QR code size inline
+    if r.check_name == "qrcode" and r.details and "size_mm" in r.details:
+        size = r.details["size_mm"]
+        if size:
+            msg += f" ({size[0]:.1f} × {size[1]:.1f} mm)"
+    
+    return msg
 
 
 def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
@@ -114,16 +118,13 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
                     f"<span style='background:#f3f4f6;color:#6b7280;font-size:11px;"
                     f"padding:1px 5px;border-radius:3px;margin-right:4px'>[p.{r.page + 1}]</span>"
                 )
-            detail = _detail_text(r)
-            detail_html = (
-                f" <span style='color:#9ca3af'>{escape(detail)}</span>" if detail else ""
-            )
+            formatted_msg = _format_message(r)
             parts.append(
                 f"<div style='padding-left:16px;font-size:12.5px;line-height:1.6'>"
                 f"<span style='color:{dot_color}'>·</span> "
                 f"{page_badge}"
-                f"<span style='color:{text_color}'>{escape(r.message)}</span>"
-                f"{detail_html}</div>"
+                f"<span style='color:{text_color}'>{escape(formatted_msg)}</span>"
+                f"</div>"
             )
 
         parts.append("</div>")

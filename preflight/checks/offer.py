@@ -33,13 +33,14 @@ EXPIRY_DATE_RE = re.compile(
 # Run on original text to preserve case.
 # Matches common French marketing phrasings that introduce a promo code.
 # The separator (colon, dash) is optional so "avec le code SAGETCAATS" works too.
+# Handles newlines between keyword and code (OCR often splits them).
 PROMO_CODE_RE = re.compile(
     r"(?:"
     r"code\s+(?:promo|remise|r[ée]duction|avantage|exclusif)"  # "code promo/remise/réduction…"
     r"|avec\s+le\s+code"                                        # "avec le code"
     r"|utilisez\s+(?:le\s+)?code"                              # "utilisez le code" / "utilisez code"
     r"|(?:votre|mon|ton)\s+code"                               # "votre/mon/ton code"
-    r")\s*[:\-–]?\s*([A-Za-z][A-Za-z0-9]{2,19})",
+    r")\s*[:\-–\s\n\r]*\s*([A-Za-z][A-Za-z0-9]{2,19})",
     re.IGNORECASE,
 )
 
