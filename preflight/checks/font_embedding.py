@@ -4,6 +4,7 @@ from typing import List
 
 from preflight.checks import CheckResult, Severity
 from preflight.document import Document
+from preflight.snapshot import DocumentSnapshot
 
 _STANDARD_FONTS = {
     "Arial",
@@ -19,7 +20,7 @@ _STANDARD_FONTS = {
 }
 
 
-def check_font_embedding(document: Document) -> List[CheckResult]:
+def check_font_embedding(document: Document, snapshot: DocumentSnapshot) -> List[CheckResult]:
     """Check that all fonts in PDF are embedded."""
     results: List[CheckResult] = []
 
@@ -27,9 +28,8 @@ def check_font_embedding(document: Document) -> List[CheckResult]:
         return results
 
     try:
-        fitz_doc = document._fitz_doc
-        for page_num, page in enumerate(fitz_doc):
-            for font_info in page.get_fonts(full=True):
+        for page_num in range(len(document.pages)):
+            for font_info in snapshot.page_fonts.get(page_num, []):
                 # font_info[0] = path/subset, font_info[1] = name
                 font_name = font_info[1] if len(font_info) > 1 else ""
                 font_subset = font_info[0] if len(font_info) > 0 else ""

@@ -15,6 +15,7 @@ from typing import Literal
 from preflight.checks import CheckResult, Severity
 from preflight.document import Document
 from preflight.logos import LogoLibrary, DEFAULT_THRESHOLD, SOFT_THRESHOLD
+from preflight.snapshot import DocumentSnapshot
 
 PrintMethod = Literal["Imprimé par getinside", "Imprimé par la marque"]
 
@@ -26,6 +27,7 @@ def check_logos(
     document: Document,
     library: LogoLibrary,
     print_method: PrintMethod,
+    snapshot: DocumentSnapshot,
     *,
     threshold: int = DEFAULT_THRESHOLD,
 ) -> list[CheckResult]:
@@ -49,7 +51,7 @@ def check_logos(
     # Render at 300 DPI so small logos (8-15 mm) have enough pixels for crops.
     aggregated: dict[str, int] = {}  # category -> best (lowest) distance
     for page in document.pages:
-        rendered = page.render(dpi=300) if page.source == "pdf" else page.render()
+        rendered = snapshot.page_renders[page.index]
         per_cat = library.all_distances(rendered)
         for cat, match in per_cat.items():
             if cat not in aggregated or match.distance < aggregated[cat]:

@@ -32,6 +32,7 @@ from preflight.extract import OCR_SETTINGS, OcrSettings, PageText, all_text, ext
 from preflight.formats import FormatSpec
 from preflight.industries import detect_industry
 from preflight.logos import LogoLibrary
+from preflight.snapshot import DocumentSnapshot
 
 PrintMethod = Literal["Imprimé par getinside", "Imprimé par la marque"]
 
@@ -77,19 +78,21 @@ def run_all_checks(
     if logo_library is None:
         logo_library = LogoLibrary(LOGO_LIBRARY_ROOT)
 
+    snapshot = DocumentSnapshot.build(document)
+
     results: list[CheckResult] = []
     results.extend(check_dimensions(document, context.format_spec))
     results.extend(check_bleed(document))
     results.extend(check_colorspace(document))
-    results.extend(check_image_resolution(document))
+    results.extend(check_image_resolution(document, snapshot))
     results.extend(check_transparency(document))
-    results.extend(check_qr(document))
+    results.extend(check_qr(document, snapshot))
     results.extend(
-        check_logos(document, logo_library, context.print_method)
+        check_logos(document, logo_library, context.print_method, snapshot)
     )
 
     # New print preflight checks (utiles uniquement)
-    results.extend(check_font_embedding(document))
+    results.extend(check_font_embedding(document, snapshot))
     results.extend(check_linked_images(document))
     results.extend(check_spot_colors(document))
     results.extend(check_page_boxes(document))
@@ -115,19 +118,21 @@ def run_all_checks_with_extraction(
     if logo_library is None:
         logo_library = LogoLibrary(LOGO_LIBRARY_ROOT)
 
+    snapshot = DocumentSnapshot.build(document)
+
     results: list[CheckResult] = []
     results.extend(check_dimensions(document, context.format_spec))
     results.extend(check_bleed(document))
     results.extend(check_colorspace(document))
-    results.extend(check_image_resolution(document))
+    results.extend(check_image_resolution(document, snapshot))
     results.extend(check_transparency(document))
-    results.extend(check_qr(document))
+    results.extend(check_qr(document, snapshot))
     results.extend(
-        check_logos(document, logo_library, context.print_method)
+        check_logos(document, logo_library, context.print_method, snapshot)
     )
 
     # New print preflight checks (utiles uniquement)
-    results.extend(check_font_embedding(document))
+    results.extend(check_font_embedding(document, snapshot))
     results.extend(check_linked_images(document))
     results.extend(check_spot_colors(document))
     results.extend(check_page_boxes(document))

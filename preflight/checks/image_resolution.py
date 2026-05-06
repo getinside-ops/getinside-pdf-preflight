@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from preflight.checks import CheckResult, Severity
 from preflight.document import Document
+from preflight.snapshot import DocumentSnapshot
 
 
-def check_image_resolution(document: Document) -> list[CheckResult]:
+def check_image_resolution(document: Document, snapshot: DocumentSnapshot) -> list[CheckResult]:
     results: list[CheckResult] = []
 
     for page in document.pages:
         if page.source != "pdf":
             continue
 
-        page_obj = page._page
-        image_infos = page_obj.get_image_info(hashes=False)
+        image_infos = snapshot.page_image_info.get(page.index, [])
 
         if not image_infos:
             continue

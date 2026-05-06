@@ -13,6 +13,7 @@ from __future__ import annotations
 from preflight.checks import CheckResult, Severity
 from preflight.document import Document
 from preflight.qr import detect_qr_codes
+from preflight.snapshot import DocumentSnapshot, SNAPSHOT_RENDER_DPI
 from preflight.text_normalize import normalize
 
 QR_RENDER_DPI = 300
@@ -20,18 +21,14 @@ MIN_QR_SIZE_MM = 25.0
 BASE_URL = "gtinsi.de/"
 
 
-def check_qr(document: Document) -> list[CheckResult]:
+def check_qr(document: Document, snapshot: DocumentSnapshot) -> list[CheckResult]:
     results: list[CheckResult] = []
     target = normalize(BASE_URL)
 
     detections_per_page: list[tuple[int, list]] = []
     for page in document.pages:
-        if page.source == "pdf":
-            image = page.render(dpi=QR_RENDER_DPI)
-            dpi = float(QR_RENDER_DPI)
-        else:
-            image = page.render()
-            dpi = page.dpi()  # type: ignore[assignment]
+        image = snapshot.page_renders[page.index]
+        dpi = float(SNAPSHOT_RENDER_DPI) if page.source == "pdf" else (page.dpi() or 72.0)
         detections_per_page.append((page.index, detect_qr_codes(image, dpi=dpi)))
 
     total = sum(len(dets) for _, dets in detections_per_page)

@@ -12,6 +12,7 @@ from preflight.checks.dimensions import check_dimensions
 from preflight.checks.image_resolution import check_image_resolution
 from preflight.document import Document, UploadedFile
 from preflight.formats import get_format
+from preflight.snapshot import DocumentSnapshot
 from tests.conftest import A5_W_PT, A5_H_PT
 
 
@@ -69,7 +70,8 @@ def _pdf_with_small_image() -> bytes:
 def test_low_res_image_has_bbox():
     f = UploadedFile(name="lowres.pdf", data=_pdf_with_small_image())
     doc = Document.from_upload([f])
-    results = check_image_resolution(doc)
+    snap = DocumentSnapshot.build(doc)
+    results = check_image_resolution(doc, snap)
     error_results = [r for r in results if r.severity is Severity.ERROR]
     assert error_results, "low DPI image must produce an ERROR"
     assert any(r.bbox is not None for r in error_results), (
@@ -85,7 +87,8 @@ def test_high_res_pdf_no_images_has_no_bbox():
     doc.save(out)
     f = UploadedFile(name="clean.pdf", data=out.getvalue())
     document = Document.from_upload([f])
-    results = check_image_resolution(document)
+    snap = DocumentSnapshot.build(document)
+    results = check_image_resolution(document, snap)
     assert all(r.bbox is None for r in results)
 
 
@@ -103,7 +106,8 @@ def test_high_res_image_info_result_has_no_bbox():
     doc.save(out)
     f = UploadedFile(name="highres.pdf", data=out.getvalue())
     document = Document.from_upload([f])
-    results = check_image_resolution(document)
+    snap = DocumentSnapshot.build(document)
+    results = check_image_resolution(document, snap)
     info_results = [r for r in results if r.severity is Severity.INFO]
     assert info_results, "high-DPI image should produce an INFO result"
     assert all(r.bbox is None for r in info_results), (

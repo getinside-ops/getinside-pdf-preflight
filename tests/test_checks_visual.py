@@ -15,6 +15,7 @@ from preflight.checks.dimensions import check_dimensions
 from preflight.checks.qrcode import check_qr
 from preflight.document import Document, UploadedFile
 from preflight.formats import custom_format, get_format
+from preflight.snapshot import DocumentSnapshot
 from tests.conftest import A5_H_PT, A5_W_PT
 
 
@@ -110,7 +111,8 @@ def _make_pdf_with_qr_image(qr_url: str, qr_size_px: int = 320) -> bytes:
 def test_qr_compliant():
     f = UploadedFile(name="ok.pdf", data=_make_pdf_with_qr_image("https://gtinsi.de/HELLO"))
     doc = Document.from_upload([f])
-    results = check_qr(doc)
+    snap = DocumentSnapshot.build(doc)
+    results = check_qr(doc, snap)
     assert not _has_error(results)
     assert any(r.severity is Severity.INFO and "QR code détecté" in r.message for r in results)
 
@@ -118,13 +120,15 @@ def test_qr_compliant():
 def test_qr_wrong_url_error():
     f = UploadedFile(name="bad.pdf", data=_make_pdf_with_qr_image("https://example.com/HELLO"))
     doc = Document.from_upload([f])
-    results = check_qr(doc)
+    snap = DocumentSnapshot.build(doc)
+    results = check_qr(doc, snap)
     assert _has_error(results)
 
 
 def test_qr_missing(pdf_a5_single):
     doc = Document.from_upload([pdf_a5_single])
-    results = check_qr(doc)
+    snap = DocumentSnapshot.build(doc)
+    results = check_qr(doc, snap)
     assert _has_error(results)
 
 
@@ -143,5 +147,6 @@ def test_qr_too_small():
     d.save(out)
     f = UploadedFile(name="tiny.pdf", data=out.getvalue())
     doc = Document.from_upload([f])
-    results = check_qr(doc)
+    snap = DocumentSnapshot.build(doc)
+    results = check_qr(doc, snap)
     assert any("trop petit" in r.message for r in results)
