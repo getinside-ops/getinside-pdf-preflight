@@ -7,7 +7,7 @@ them by severity for display.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -15,7 +15,6 @@ from preflight.checks import CheckResult, Severity
 from preflight.checks.advertiser import check_advertiser
 from preflight.checks.bleed import check_bleed
 from preflight.checks.colorspace import check_colorspace
-from preflight.checks.contrast import check_contrast
 from preflight.checks.dimensions import check_dimensions
 from preflight.checks.font_embedding import check_font_embedding
 from preflight.checks.image_resolution import check_image_resolution
@@ -44,6 +43,24 @@ class CheckContext:
     format_spec: FormatSpec
     industry: str = ""
     print_method: PrintMethod = "Imprimé par getinside"
+    severity_overrides: dict[str, Severity] = field(default_factory=dict)
+
+
+def _apply_severity_overrides(
+    results: list[CheckResult], overrides: dict[str, Severity]
+) -> list[CheckResult]:
+    if not overrides:
+        return results
+    return [
+        CheckResult(
+            check_name=r.check_name,
+            severity=overrides[r.check_name] if r.check_name in overrides else r.severity,
+            message=r.message,
+            details=r.details,
+            page=r.page,
+        )
+        for r in results
+    ]
 
 
 @dataclass(frozen=True)
@@ -71,7 +88,6 @@ def run_all_checks(
     results.extend(check_image_resolution(document))
     results.extend(check_transparency(document))
     results.extend(check_qr(document))
-    results.extend(check_contrast(document))
     results.extend(
         check_logos(document, logo_library, context.print_method)
     )
@@ -91,7 +107,7 @@ def run_all_checks(
     results.extend(check_printer(document_text, context.print_method))
     results.extend(check_industry(document_text, effective_industry))
 
-    return results
+    return _apply_severity_overrides(results, context.severity_overrides)
 
 
 def run_all_checks_with_extraction(
@@ -110,7 +126,6 @@ def run_all_checks_with_extraction(
     results.extend(check_image_resolution(document))
     results.extend(check_transparency(document))
     results.extend(check_qr(document))
-    results.extend(check_contrast(document))
     results.extend(
         check_logos(document, logo_library, context.print_method)
     )
@@ -145,6 +160,7 @@ def run_all_checks_with_extraction(
         detection_confidence=detection_confidence,
     )
 
+    results = _apply_severity_overrides(results, context.severity_overrides)
     return results, extraction_info
 
 
@@ -169,6 +185,7 @@ __all__ = [
     "ExtractionInfo",
     "LOGO_LIBRARY_ROOT",
     "PrintMethod",
+    "_apply_severity_overrides",
     "overall_verdict",
     "run_all_checks",
     "run_all_checks_with_extraction",

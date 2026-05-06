@@ -122,3 +122,42 @@ def test_pipeline_recto_verso_text_aggregates(tmp_path):
         r for r in results if r.check_name == "advertiser" and r.severity is Severity.ERROR
     ]
     assert advertiser_errors == []
+
+
+def test_severity_override_downgrades_matching_check(pdf_a5_single):
+    from preflight.document import Document
+    doc = Document.from_upload([pdf_a5_single])
+    ctx = CheckContext(
+        format_spec=get_format("A5"),
+        severity_overrides={"colorspace": Severity.INFO},
+    )
+    results = run_all_checks(doc, ctx)
+    colorspace_results = [r for r in results if r.check_name == "colorspace"]
+    assert colorspace_results, "colorspace check must produce results"
+    assert all(r.severity is Severity.INFO for r in colorspace_results), (
+        "All colorspace results should be downgraded to INFO"
+    )
+
+
+def test_severity_override_does_not_affect_other_checks(pdf_a5_single):
+    from preflight.document import Document
+    doc = Document.from_upload([pdf_a5_single])
+    ctx = CheckContext(
+        format_spec=get_format("A5"),
+        severity_overrides={"colorspace": Severity.INFO},
+    )
+    results = run_all_checks(doc, ctx)
+    non_colorspace = [r for r in results if r.check_name != "colorspace"]
+    assert non_colorspace, "other checks must still run"
+
+
+def test_severity_override_empty_dict_is_noop(pdf_a5_single):
+    from preflight.document import Document
+    doc = Document.from_upload([pdf_a5_single])
+    ctx_no_override = CheckContext(format_spec=get_format("A5"))
+    ctx_empty = CheckContext(format_spec=get_format("A5"), severity_overrides={})
+    results_no = run_all_checks(doc, ctx_no_override)
+    results_empty = run_all_checks(doc, ctx_empty)
+    assert [(r.check_name, r.severity) for r in results_no] == [
+        (r.check_name, r.severity) for r in results_empty
+    ]
