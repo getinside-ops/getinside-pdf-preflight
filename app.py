@@ -117,6 +117,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ---------- Upload zone helper ------------------------------------------
+
+
+def _render_upload_zone() -> list | None:
+    """Render the permanent upload zone with drag & drop."""
+    return st.file_uploader(
+        "PDF (1-2 pages) ou 1-2 images PNG/JPEG",
+        type=["pdf", "png", "jpg", "jpeg"],
+        accept_multiple_files=True,
+        label_visibility="collapsed",
+    )
+
+
 # ---------- Controls ----------------------------------------------------------
 
 has_stored_results = "results" in st.session_state and "context" in st.session_state
@@ -230,12 +243,7 @@ else:
         )
     st.caption("✦ L'industrie sera détectée automatiquement d'après le contenu du document.")
 
-    uploaded = st.file_uploader(
-        "PDF (1-2 pages) ou 1-2 images PNG/JPEG",
-        type=["pdf", "png", "jpg", "jpeg"],
-        accept_multiple_files=True,
-        label_visibility="collapsed",
-    )
+    uploaded = _render_upload_zone()
 
     run_button = st.button(
         "Lancer la vérification",
@@ -504,8 +512,25 @@ elif has_stored_results and has_doc_data:
     extraction_info = st.session_state.get("extraction_info")
     display_results = True
 
+
+def _clear_session() -> None:
+    """Clear all session state and return to upload."""
+    keys = list(st.session_state.keys())
+    for key in keys:
+        del st.session_state[key]
+    st.rerun()
+
+
 # Display results if analysis was run (either now or from session state)
 if display_results and document is not None:
+    # Show file info + Nouveau fichier button
+    col_file, col_new = st.columns([4, 1])
+    with col_file:
+        st.caption(f"**Fichier:** {doc_name}")
+    with col_new:
+        if st.button("Nouveau fichier", use_container_width=True):
+            _clear_session()
+
     _display_analysis_results(document, results, context, extraction_info, doc_name)
 
 elif not uploaded and not has_stored_results:
