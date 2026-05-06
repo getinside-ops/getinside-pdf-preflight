@@ -124,9 +124,31 @@ def test_pipeline_recto_verso_text_aggregates(tmp_path):
     assert advertiser_errors == []
 
 
-def test_severity_override_downgrades_matching_check(pdf_a5_single):
-    from preflight.document import Document
-    doc = Document.from_upload([pdf_a5_single])
+def test_severity_override_downgrades_matching_check():
+    from PIL import Image as PILImage
+    # Build a PDF with an embedded RGB image → colorspace check will ERROR
+    A5_W_PT = 148.0 / 25.4 * 72.0
+    A5_H_PT = 210.0 / 25.4 * 72.0
+    fitz_doc = fitz.open()
+    page = fitz_doc.new_page(width=A5_W_PT, height=A5_H_PT)
+    img = PILImage.new("RGB", (100, 100), color="red")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    page.insert_image(fitz.Rect(50, 50, 150, 150), stream=buf.getvalue())
+    pdf_buf = io.BytesIO()
+    fitz_doc.save(pdf_buf)
+    f = UploadedFile(name="rgb.pdf", data=pdf_buf.getvalue())
+    doc = Document.from_upload([f])
+
+    # Without override: should have at least one colorspace ERROR
+    ctx_no_override = CheckContext(format_spec=get_format("A5"))
+    results_baseline = run_all_checks(doc, ctx_no_override)
+    baseline_colorspace = [r for r in results_baseline if r.check_name == "colorspace"]
+    assert any(r.severity is Severity.ERROR for r in baseline_colorspace), (
+        "baseline should have a colorspace ERROR from the RGB image"
+    )
+
+    # With override: all colorspace results become INFO
     ctx = CheckContext(
         format_spec=get_format("A5"),
         severity_overrides={"colorspace": Severity.INFO},
@@ -140,19 +162,20 @@ def test_severity_override_downgrades_matching_check(pdf_a5_single):
 
 
 def test_severity_override_does_not_affect_other_checks(pdf_a5_single):
-    from preflight.document import Document
     doc = Document.from_upload([pdf_a5_single])
-    ctx = CheckContext(
+    ctx_no_override = CheckContext(format_spec=get_format("A5"))
+    ctx_override = CheckContext(
         format_spec=get_format("A5"),
         severity_overrides={"colorspace": Severity.INFO},
     )
-    results = run_all_checks(doc, ctx)
-    non_colorspace = [r for r in results if r.check_name != "colorspace"]
-    assert non_colorspace, "other checks must still run"
+    baseline = run_all_checks(doc, ctx_no_override)
+    overridden = run_all_checks(doc, ctx_override)
+    baseline_other = [(r.check_name, r.severity) for r in baseline if r.check_name != "colorspace"]
+    overridden_other = [(r.check_name, r.severity) for r in overridden if r.check_name != "colorspace"]
+    assert baseline_other == overridden_other
 
 
 def test_severity_override_empty_dict_is_noop(pdf_a5_single):
-    from preflight.document import Document
     doc = Document.from_upload([pdf_a5_single])
     ctx_no_override = CheckContext(format_spec=get_format("A5"))
     ctx_empty = CheckContext(format_spec=get_format("A5"), severity_overrides={})

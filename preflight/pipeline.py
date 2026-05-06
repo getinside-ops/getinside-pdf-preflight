@@ -7,7 +7,7 @@ them by severity for display.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace as dc_replace
 from pathlib import Path
 from typing import Literal
 
@@ -52,13 +52,9 @@ def _apply_severity_overrides(
     if not overrides:
         return results
     return [
-        CheckResult(
-            check_name=r.check_name,
-            severity=overrides[r.check_name] if r.check_name in overrides else r.severity,
-            message=r.message,
-            details=r.details,
-            page=r.page,
-        )
+        dc_replace(r, severity=overrides[r.check_name])
+        if r.check_name in overrides
+        else r
         for r in results
     ]
 
@@ -185,7 +181,6 @@ __all__ = [
     "ExtractionInfo",
     "LOGO_LIBRARY_ROOT",
     "PrintMethod",
-    "_apply_severity_overrides",
     "overall_verdict",
     "run_all_checks",
     "run_all_checks_with_extraction",
