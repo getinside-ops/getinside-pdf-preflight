@@ -133,7 +133,7 @@ if has_stored_results:
     last_run_industry = st.session_state.get("last_run_industry", effective_industry)
     last_run_print = st.session_state.get("last_run_print", ctx_stored.print_method)
 
-    col_fmt, col_ind, col_print, col_file = st.columns([2, 3, 2, 3])
+    col_fmt, col_ind, col_print = st.columns([2, 3, 2])
 
     with col_fmt:
         new_format_name = st.selectbox(
@@ -203,68 +203,6 @@ if has_stored_results:
             index=0 if last_run_print == "Imprimé par getinside" else 1,
             key="ctrl_print",
         )
-
-    params_changed = (
-        new_format_name != last_run_format
-        or effective_industry != last_run_industry
-        or new_print_method != last_run_print
-    )
-
-    with col_file:
-        doc_name_stored = st.session_state.get("doc_name", "")
-        fname_c, btn_c = st.columns([3, 2])
-        with fname_c:
-            st.markdown(
-                f"<div style='margin-top:4px'>"
-                f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
-                f"letter-spacing:0.05em;margin-bottom:4px'>Fichier</div>"
-                f"<div style='display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;"
-                f"border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:12px;"
-                f"color:#475569;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>"
-                f"{_lucide_icon('file_text', 13)} {escape(doc_name_stored)}</div>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-        with btn_c:
-            st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-            ba, bb = st.columns(2)
-            with ba:
-                reanalyze = st.button("↺", key="reanalyze", disabled=not params_changed, help="Re-analyser avec ces paramètres", use_container_width=True)
-            with bb:
-                new_file = st.button("+", key="new_file", help="Analyser un autre fichier", use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    if new_file:
-        st.session_state.clear()
-        st.rerun()
-
-    if reanalyze:
-        files = [UploadedFile(name=n, data=d) for n, d in st.session_state["doc_data"]]
-        try:
-            document_rerun = Document.from_upload(files)
-        except DocumentError as exc:
-            st.error(str(exc))
-            st.stop()
-        rerun_context = CheckContext(
-            format_spec=new_format_spec,
-            industry=effective_industry,
-            print_method=new_print_method,
-        )
-        library = LogoLibrary(LOGO_LIBRARY_ROOT)
-        with st.spinner("Re-analyse en cours…"):
-            new_results, new_extraction_info = run_all_checks_with_extraction(
-                document_rerun, rerun_context, logo_library=library
-            )
-        st.session_state["results"] = new_results
-        st.session_state["extraction_info"] = new_extraction_info
-        st.session_state["context"] = rerun_context
-        st.session_state["last_run_format"] = new_format_name
-        st.session_state["last_run_industry"] = effective_industry
-        st.session_state["last_run_print"] = new_print_method
-        st.session_state["detected_industry"] = new_extraction_info.detected_industry
-        st.session_state["detection_confidence"] = new_extraction_info.detection_confidence
-        st.session_state["industry_edit_mode"] = False
-        st.rerun()
 
     # Update format_spec and print_method for the display code below
     format_spec = new_format_spec
