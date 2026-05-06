@@ -243,13 +243,14 @@ else:
         )
     st.caption("✦ L'industrie sera détectée automatiquement d'après le contenu du document.")
 
-    uploaded = _render_upload_zone()
+# Zone upload - TOUJOURS visible (après les contrôles)
+uploaded = _render_upload_zone()
 
-    run_button = st.button(
-        "Lancer la vérification",
-        type="primary",
-        disabled=not uploaded,
-    )
+run_button = st.button(
+    "Lancer la vérification",
+    type="primary",
+    disabled=not uploaded,
+)
 
 # ---------- Helpers -----------------------------------------------------------
 
