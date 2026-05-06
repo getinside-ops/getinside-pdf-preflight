@@ -16,7 +16,6 @@ from preflight.qr import detect_qr_codes
 from preflight.snapshot import DocumentSnapshot, SNAPSHOT_RENDER_DPI
 from preflight.text_normalize import normalize
 
-QR_RENDER_DPI = 300
 MIN_QR_SIZE_MM = 25.0
 BASE_URL = "gtinsi.de/"
 
@@ -87,4 +86,4 @@ def check_qr(document: Document, snapshot: DocumentSnapshot) -> list[CheckResult
     return results
 
 
-__all__ = ["BASE_URL", "check_qr", "MIN_QR_SIZE_MM", "QR_RENDER_DPI"]
+__all__ = ["BASE_URL", "check_qr", "MIN_QR_SIZE_MM"]

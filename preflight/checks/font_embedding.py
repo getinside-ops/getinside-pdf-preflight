@@ -1,6 +1,6 @@
 """Font embedding verification."""
 
-from typing import List
+from __future__ import annotations
 
 from preflight.checks import CheckResult, Severity
 from preflight.document import Document
@@ -20,16 +20,16 @@ _STANDARD_FONTS = {
 }
 
 
-def check_font_embedding(document: Document, snapshot: DocumentSnapshot) -> List[CheckResult]:
+def check_font_embedding(document: Document, snapshot: DocumentSnapshot) -> list[CheckResult]:
     """Check that all fonts in PDF are embedded."""
-    results: List[CheckResult] = []
+    results: list[CheckResult] = []
 
     if document.kind != "pdf":
         return results
 
     try:
-        for page_num in range(len(document.pages)):
-            for font_info in snapshot.page_fonts.get(page_num, []):
+        for page in document.pages:
+            for font_info in snapshot.page_fonts.get(page.index, []):
                 # font_info[0] = path/subset, font_info[1] = name
                 font_name = font_info[1] if len(font_info) > 1 else ""
                 font_subset = font_info[0] if len(font_info) > 0 else ""
@@ -49,8 +49,8 @@ def check_font_embedding(document: Document, snapshot: DocumentSnapshot) -> List
                             check_name="font_embedding",
                             severity=Severity.WARNING,
                             message=f"Police '{font_name}' potentiellement non embarquée",
-                            details={"font": font_name, "page": page_num + 1},
-                            page=page_num,
+                            details={"font": font_name, "page": page.index + 1},
+                            page=page.index,
                         )
                     )
     except Exception as exc:
