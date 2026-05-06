@@ -222,8 +222,6 @@ if has_stored_results:
     print_method = new_print_method
     format_name = new_format_name
 
-    uploaded = None
-    run_button = False
     st.markdown("<hr style='margin:12px 0 4px;border:none;border-top:1px solid #f1f5f9'>", unsafe_allow_html=True)
 
 else:
