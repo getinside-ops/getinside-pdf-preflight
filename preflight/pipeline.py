@@ -31,6 +31,7 @@ from preflight.checks.transparency import check_transparency
 from preflight.document import Document
 from preflight.extract import OCR_SETTINGS, OcrSettings, PageText, all_text, extract_document_text
 from preflight.formats import FormatSpec
+from preflight.industries import detect_industry
 from preflight.logos import LogoLibrary
 
 PrintMethod = Literal["Imprimé par getinside", "Imprimé par la marque"]
@@ -41,8 +42,8 @@ LOGO_LIBRARY_ROOT = Path(__file__).resolve().parent.parent / "assets" / "logos"
 @dataclass
 class CheckContext:
     format_spec: FormatSpec
-    industry: str
-    print_method: PrintMethod
+    industry: str = ""
+    print_method: PrintMethod = "Imprimé par getinside"
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,8 @@ class ExtractionInfo:
     pages: list[PageText]
     ocr_settings: OcrSettings
     text_used: str
+    detected_industry: str = "Général"
+    detection_confidence: float = 0.0
 
 
 def run_all_checks(
@@ -80,11 +83,13 @@ def run_all_checks(
     results.extend(check_page_boxes(document))
 
     document_text = all_text(document)
+    detected, _ = detect_industry(document_text)
+    effective_industry = context.industry if context.industry else detected
 
     results.extend(check_advertiser(document_text))
     results.extend(check_offer(document_text))
     results.extend(check_printer(document_text, context.print_method))
-    results.extend(check_industry(document_text, context.industry))
+    results.extend(check_industry(document_text, effective_industry))
 
     return results
 
@@ -117,12 +122,14 @@ def run_all_checks_with_extraction(
     results.extend(check_page_boxes(document))
 
     page_texts = extract_document_text(document)
-    document_text = all_text(document)
+    document_text = " ".join(pt.text for pt in page_texts)
+    detected_industry, detection_confidence = detect_industry(document_text)
+    effective_industry = context.industry if context.industry else detected_industry
 
     results.extend(check_advertiser(document_text))
     results.extend(check_offer(document_text))
     results.extend(check_printer(document_text, context.print_method))
-    results.extend(check_industry(document_text, context.industry))
+    results.extend(check_industry(document_text, effective_industry))
 
     ocr_settings = OCR_SETTINGS
     for pt in page_texts:
@@ -134,6 +141,8 @@ def run_all_checks_with_extraction(
         pages=page_texts,
         ocr_settings=ocr_settings,
         text_used=document_text,
+        detected_industry=detected_industry,
+        detection_confidence=detection_confidence,
     )
 
     return results, extraction_info
