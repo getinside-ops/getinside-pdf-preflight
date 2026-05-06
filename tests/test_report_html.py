@@ -140,3 +140,42 @@ def test_warning_card_is_open_by_default(ctx):
     results = [_r("colorspace", Severity.WARNING, "Couleur non CMJN")]
     html = build_html_report(results, ctx)
     assert "<details open>" in html
+
+
+def test_detail_label_translated_to_french(ctx):
+    results = [_r("dimensions", Severity.INFO, "OK", details={"found_mm": (105.0, 148.0)})]
+    html = build_html_report(results, ctx)
+    assert "Dimensions détectées" in html
+    assert "found_mm" not in html
+
+
+def test_detail_label_fallback_for_unknown_key(ctx):
+    results = [_r("dimensions", Severity.ERROR, "Err", details={"unknown_key": 42})]
+    html = build_html_report(results, ctx)
+    assert "unknown_key" in html
+
+
+def test_detail_scalar_unit_appended(ctx):
+    results = [_r("dimensions", Severity.ERROR, "Err", details={"tolerance_mm": 1})]
+    html = build_html_report(results, ctx)
+    assert "1 mm" in html
+
+
+def test_detail_dpi_unit_appended(ctx):
+    results = [_r("image_resolution", Severity.ERROR, "Err", details={"dpi": 72, "min_dpi": 300})]
+    html = build_html_report(results, ctx)
+    assert "72 DPI" in html
+    assert "300 DPI" in html
+
+
+def test_detail_kind_value_translated(ctx):
+    results = [_r("dimensions", Severity.INFO, "OK", details={"kind": "final"})]
+    html = build_html_report(results, ctx)
+    assert "format final" in html
+    assert ">final<" not in html
+
+
+def test_detail_kind_bleed_translated(ctx):
+    results = [_r("dimensions", Severity.INFO, "OK", details={"kind": "bleed"})]
+    html = build_html_report(results, ctx)
+    assert "format avec fond perdu" in html
