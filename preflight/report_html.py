@@ -17,7 +17,6 @@ _CHECK_META: dict[str, tuple[str, str]] = {
     "advertiser":  ("", "ANNONCEUR"),
     "offer":       ("", "OFFRE"),
     "printer":     ("", "IMPRIMEUR"),
-    "contrast":    ("", "CONTRASTE"),
     "industry":    ("", "RÉGLEMENTAIRE"),
     "font_embedding": ("", "POLICES"),
     "linked_images": ("", "IMAGES"),
@@ -43,6 +42,34 @@ _SEV_ICON: dict[Severity, tuple[str, str, str, str]] = {
     Severity.ERROR:   ("#fef2f2", "#fca5a5", "#dc2626", "✕"),
     Severity.WARNING: ("#fffbeb", "#fcd34d", "#d97706", "!"),
     Severity.INFO:    ("#f0fdf4", "#86efac", "#16a34a", "✓"),
+}
+
+_DETAIL_LABELS_FR: dict[str, str] = {
+    "found_mm":            "Dimensions détectées",
+    "expected_final_mm":   "Format final attendu",
+    "expected_bleed_mm":   "Format avec fond perdu attendu",
+    "tolerance_mm":        "Tolérance",
+    "kind":                "Correspondance",
+    "trim_box_mm":         "TrimBox (zone de découpe finale)",
+    "media_box_mm":        "MediaBox (page entière, inclut fond perdu ou traits de coupe)",
+    "violations_count":    "Éléments dans la zone tranquille",
+    "min_dist_mm":         "Distance minimale au bord",
+    "dpi":                 "Résolution détectée",
+    "min_dpi":             "Résolution minimale requise",
+    "short_side_mm":       "Côté le plus court",
+}
+
+_DETAIL_UNITS_FR: dict[str, str] = {
+    "tolerance_mm":  "mm",
+    "min_dist_mm":   "mm",
+    "short_side_mm": "mm",
+    "dpi":           "DPI",
+    "min_dpi":       "DPI",
+}
+
+_KIND_VALUES_FR: dict[str, str] = {
+    "final": "format final",
+    "bleed": "format avec fond perdu",
 }
 
 
@@ -155,9 +182,16 @@ def build_html_report(results: list[CheckResult], context: CheckContext) -> str:
                 for k, v in r.details.items():
                     if k == "page":
                         continue
+                    label = _DETAIL_LABELS_FR.get(k, k)
+                    if k == "kind":
+                        v = _KIND_VALUES_FR.get(str(v), str(v))
+                    formatted_v = _fmt_detail_value(v)
+                    unit = _DETAIL_UNITS_FR.get(k, "")
+                    if unit and not isinstance(v, (list, tuple)):
+                        formatted_v = f"{formatted_v} {unit}"
                     detail_lines += (
                         f"<div style='padding-left:28px;font-size:11.5px;color:#9ca3af'>"
-                        f"{escape(k)}: {escape(_fmt_detail_value(v))}</div>"
+                        f"{escape(label)}: {escape(formatted_v)}</div>"
                     )
             parts.append(
                 f"<div style='padding:4px 0;font-size:12.5px;line-height:1.6'>"
