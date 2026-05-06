@@ -124,22 +124,133 @@ has_doc_data = "doc_name" in st.session_state and "doc_data" in st.session_state
 
 if has_stored_results:
     ctx_stored = st.session_state["context"]
-    format_spec = ctx_stored.format_spec
-    industry = ctx_stored.industry
-    print_method = ctx_stored.print_method
-    col_summary, col_btn = st.columns([9, 1])
-    with col_summary:
+    detected_industry = st.session_state.get("detected_industry", "Général")
+    detection_confidence = st.session_state.get("detection_confidence", 0.0)
+    industry_override = st.session_state.get("industry_override")
+    effective_industry = industry_override if industry_override else detected_industry
+
+    last_run_format = st.session_state.get("last_run_format", ctx_stored.format_spec.name)
+    last_run_industry = st.session_state.get("last_run_industry", effective_industry)
+    last_run_print = st.session_state.get("last_run_print", ctx_stored.print_method)
+
+    col_fmt, col_ind, col_print, col_file, col_btn = st.columns([2, 2, 2, 2, 1])
+
+    with col_fmt:
+        new_format_name = st.selectbox(
+            "Format",
+            options=FORMAT_NAMES,
+            index=FORMAT_NAMES.index(last_run_format) if last_run_format in FORMAT_NAMES else 0,
+            key="ctrl_format",
+        )
+        if new_format_name == "Custom":
+            new_format_spec = custom_format(ctx_stored.format_spec.width_mm, ctx_stored.format_spec.height_mm)
+        else:
+            new_format_spec = get_format(new_format_name)
+
+    with col_ind:
+        if st.session_state.get("industry_edit_mode"):
+            new_industry_sel = st.selectbox(
+                "Industrie",
+                options=INDUSTRY_NAMES,
+                index=INDUSTRY_NAMES.index(effective_industry) if effective_industry in INDUSTRY_NAMES else 0,
+                key="ctrl_industry_override",
+            )
+            if st.button("✓", key="confirm_industry"):
+                st.session_state["industry_override"] = new_industry_sel
+                st.session_state["industry_edit_mode"] = False
+                st.rerun()
+        else:
+            conf_pct = int(detection_confidence * 100)
+            is_auto = industry_override is None
+            badge_label = escape(effective_industry)
+            auto_tag = (
+                f"<span style='background:#c4b5fd;color:#3b0764;font-size:10px;"
+                f"font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px'>AUTO</span>"
+                f"<span style='color:#7c3aed;font-size:11px;margin-left:4px'>{conf_pct}%</span>"
+                if is_auto else
+                f"<span style='background:#ddd6fe;color:#5b21b6;font-size:10px;"
+                f"font-weight:600;padding:2px 6px;border-radius:4px;margin-left:4px'>MODIFIÉ</span>"
+            )
+            st.markdown(
+                f"<div style='margin-top:4px'>"
+                f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
+                f"letter-spacing:0.05em;margin-bottom:4px'>Industrie</div>"
+                f"<div style='display:inline-flex;align-items:center;background:#ede9fe;"
+                f"border:1px solid #c4b5fd;border-radius:7px;padding:5px 11px;font-size:12px;"
+                f"font-weight:500;color:#5b21b6'>{badge_label}{auto_tag}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            if st.button("modifier", key="edit_industry"):
+                st.session_state["industry_edit_mode"] = True
+                st.rerun()
+
+    with col_print:
+        new_print_method = st.selectbox(
+            "Impression",
+            options=["Imprimé par getinside", "Imprimé par la marque"],
+            index=0 if last_run_print == "Imprimé par getinside" else 1,
+            key="ctrl_print",
+        )
+
+    with col_file:
+        doc_name_stored = st.session_state.get("doc_name", "")
         st.markdown(
-            f"<span style='color:#6b7280;font-size:13px'>"
-            f"<b>{format_spec.name}</b> &nbsp;·&nbsp; {industry} &nbsp;·&nbsp; {print_method}</span>",
+            f"<div style='margin-top:4px'>"
+            f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
+            f"letter-spacing:0.05em;margin-bottom:4px'>Fichier</div>"
+            f"<div style='display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;"
+            f"border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:12px;"
+            f"color:#475569'>{_lucide_icon('file_text', 13)} {escape(doc_name_stored)}</div>"
+            f"</div>",
             unsafe_allow_html=True,
         )
+
     with col_btn:
-        if st.button("Modifier", key="modify_settings"):
-            st.session_state.clear()
-            st.rerun()
+        current_industry = st.session_state.get("industry_override") or detected_industry
+        params_changed = (
+            new_format_name != last_run_format
+            or current_industry != last_run_industry
+            or new_print_method != last_run_print
+        )
+        st.markdown("<div style='margin-top:20px'>", unsafe_allow_html=True)
+        reanalyze = st.button("↺", key="reanalyze", disabled=not params_changed, help="Re-analyser avec ces paramètres")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Handle re-analysis
+    if reanalyze:
+        files = [UploadedFile(name=n, data=d) for n, d in st.session_state["doc_data"]]
+        try:
+            document_rerun = Document.from_upload(files)
+        except DocumentError as exc:
+            st.error(str(exc))
+            st.stop()
+        rerun_context = CheckContext(
+            format_spec=new_format_spec,
+            industry=current_industry,
+            print_method=new_print_method,
+        )
+        library = LogoLibrary(LOGO_LIBRARY_ROOT)
+        with st.spinner("Re-analyse en cours…"):
+            new_results, new_extraction_info = run_all_checks_with_extraction(
+                document_rerun, rerun_context, logo_library=library
+            )
+        st.session_state["results"] = new_results
+        st.session_state["extraction_info"] = new_extraction_info
+        st.session_state["context"] = rerun_context
+        st.session_state["last_run_format"] = new_format_name
+        st.session_state["last_run_industry"] = current_industry
+        st.session_state["last_run_print"] = new_print_method
+        # Keep detected_industry from original detection (document hasn't changed)
+        st.rerun()
+
+    # Update format_spec and print_method for the display code below
+    format_spec = new_format_spec
+    print_method = new_print_method
+    format_name = new_format_name
+
 else:
-    col_fmt, col_ind, col_print = st.columns([2, 2, 3])
+    col_fmt, col_print = st.columns([2, 3])
     with col_fmt:
         format_name = st.selectbox("Format", options=FORMAT_NAMES, index=0)
         if format_name == "Custom":
@@ -148,13 +259,12 @@ else:
             format_spec = custom_format(float(custom_w), float(custom_h))
         else:
             format_spec = get_format(format_name)
-    with col_ind:
-        industry = st.selectbox("Industrie", options=INDUSTRY_NAMES)
     with col_print:
         print_method = st.radio(
             "Impression",
             options=["Imprimé par getinside", "Imprimé par la marque"],
         )
+    st.caption("✦ L'industrie sera détectée automatiquement d'après le contenu du document.")
 
 uploaded = st.file_uploader(
     "PDF (1-2 pages) ou 1-2 images PNG/JPEG",
@@ -270,6 +380,13 @@ def _render_html_report(results, context: CheckContext) -> None:
 
 
 def _display_analysis_results(document, results, context, extraction_info, doc_name) -> None:
+    eff_industry = st.session_state.get("industry_override") or st.session_state.get("detected_industry", context.industry)
+    display_context = CheckContext(
+        format_spec=context.format_spec,
+        industry=eff_industry,
+        print_method=context.print_method,
+    )
+
     col_left, col_right = st.columns([4, 6])
 
     with col_left:
@@ -353,7 +470,7 @@ def _display_analysis_results(document, results, context, extraction_info, doc_n
         )
 
         # --- Check cards ---
-        _render_html_report(results, context)
+        _render_html_report(results, display_context)
 
 
 # ---------- Run ---------------------------------------------------------------
@@ -382,7 +499,7 @@ if run_button and uploaded:
 
     context = CheckContext(
         format_spec=format_spec,
-        industry=industry,
+        industry="",
         print_method=print_method,
     )
 
@@ -398,6 +515,12 @@ if run_button and uploaded:
     st.session_state["context"] = context
     st.session_state["doc_name"] = doc_name
     st.session_state["doc_data"] = file_data  # Already read, store for restoration
+    st.session_state["detected_industry"] = extraction_info.detected_industry
+    st.session_state["detection_confidence"] = extraction_info.detection_confidence
+    st.session_state["industry_override"] = None
+    st.session_state["last_run_format"] = format_name
+    st.session_state["last_run_industry"] = extraction_info.detected_industry
+    st.session_state["last_run_print"] = print_method
     display_results = True
 
 elif has_stored_results and has_doc_data:
