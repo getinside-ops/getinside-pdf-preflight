@@ -163,10 +163,11 @@ if has_stored_results:
             conf_pct = int(detection_confidence * 100)
             is_auto = industry_override is None
             badge_label = escape(effective_industry)
+            conf_str = f"<span style='color:#7c3aed;font-size:11px;margin-left:4px'>{conf_pct}%</span>" if conf_pct > 0 else ""
             auto_tag = (
                 f"<span style='background:#c4b5fd;color:#3b0764;font-size:10px;"
                 f"font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px'>AUTO</span>"
-                f"<span style='color:#7c3aed;font-size:11px;margin-left:4px'>{conf_pct}%</span>"
+                f"{conf_str}"
                 if is_auto else
                 f"<span style='background:#ddd6fe;color:#5b21b6;font-size:10px;"
                 f"font-weight:600;padding:2px 6px;border-radius:4px;margin-left:4px'>MODIFIÉ</span>"
@@ -207,10 +208,9 @@ if has_stored_results:
         )
 
     with col_btn:
-        current_industry = st.session_state.get("industry_override") or detected_industry
         params_changed = (
             new_format_name != last_run_format
-            or current_industry != last_run_industry
+            or effective_industry != last_run_industry
             or new_print_method != last_run_print
         )
         st.markdown("<div style='margin-top:20px'>", unsafe_allow_html=True)
@@ -227,7 +227,7 @@ if has_stored_results:
             st.stop()
         rerun_context = CheckContext(
             format_spec=new_format_spec,
-            industry=current_industry,
+            industry=effective_industry,
             print_method=new_print_method,
         )
         library = LogoLibrary(LOGO_LIBRARY_ROOT)
@@ -239,9 +239,11 @@ if has_stored_results:
         st.session_state["extraction_info"] = new_extraction_info
         st.session_state["context"] = rerun_context
         st.session_state["last_run_format"] = new_format_name
-        st.session_state["last_run_industry"] = current_industry
+        st.session_state["last_run_industry"] = effective_industry
         st.session_state["last_run_print"] = new_print_method
-        # Keep detected_industry from original detection (document hasn't changed)
+        st.session_state["detected_industry"] = new_extraction_info.detected_industry
+        st.session_state["detection_confidence"] = new_extraction_info.detection_confidence
+        st.session_state["industry_edit_mode"] = False
         st.rerun()
 
     # Update format_spec and print_method for the display code below
