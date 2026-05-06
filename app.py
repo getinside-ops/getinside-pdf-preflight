@@ -17,7 +17,7 @@ from preflight.pipeline import (
     run_all_checks_with_extraction,
     summarize,
 )
-from preflight.checks import Severity
+
 from preflight.logos import LogoLibrary
 from preflight.metadata import extract_metadata, software_flag
 from preflight.report_html import build_html_report
