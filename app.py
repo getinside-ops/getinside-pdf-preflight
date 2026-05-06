@@ -161,53 +161,21 @@ if has_stored_results:
             new_format_spec = get_format(new_format_name)
 
     with col_ind:
-        if st.session_state.get("industry_edit_mode"):
-            sel_c, ok_c = st.columns([4, 1])
-            with sel_c:
-                new_industry_sel = st.selectbox(
-                    "Industrie",
-                    options=INDUSTRY_NAMES,
-                    index=INDUSTRY_NAMES.index(effective_industry) if effective_industry in INDUSTRY_NAMES else 0,
-                    key="ctrl_industry_override",
-                )
-            with ok_c:
-                st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-                if st.button("✓", key="confirm_industry"):
-                    st.session_state["industry_override"] = new_industry_sel
-                    st.session_state["industry_edit_mode"] = False
-                    st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
-        else:
-            conf_pct = int(detection_confidence * 100)
-            is_auto = industry_override is None
-            badge_label = escape(effective_industry)
-            conf_str = f"<span style='color:#7c3aed;font-size:11px;margin-left:4px'>{conf_pct}%</span>" if conf_pct > 0 else ""
-            auto_tag = (
-                f"<span style='background:#c4b5fd;color:#3b0764;font-size:10px;"
-                f"font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px'>AUTO</span>"
-                f"{conf_str}"
-                if is_auto else
-                f"<span style='background:#ddd6fe;color:#5b21b6;font-size:10px;"
-                f"font-weight:600;padding:2px 6px;border-radius:4px;margin-left:4px'>MODIFIÉ</span>"
+        sel_c, ok_c = st.columns([4, 1])
+        with sel_c:
+            new_industry_sel = st.selectbox(
+                "Industrie",
+                options=INDUSTRY_NAMES,
+                index=INDUSTRY_NAMES.index(effective_industry) if effective_industry in INDUSTRY_NAMES else 0,
+                key="ctrl_industry_override",
             )
-            badge_c, pen_c = st.columns([5, 1])
-            with badge_c:
-                st.markdown(
-                    f"<div style='margin-top:4px'>"
-                    f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
-                    f"letter-spacing:0.05em;margin-bottom:4px'>Industrie</div>"
-                    f"<div style='display:inline-flex;align-items:center;background:#ede9fe;"
-                    f"border:1px solid #c4b5fd;border-radius:7px;padding:5px 11px;font-size:12px;"
-                    f"font-weight:500;color:#5b21b6'>{badge_label}{auto_tag}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-            with pen_c:
-                st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-                if st.button("✏", key="edit_industry", help="Modifier l'industrie"):
-                    st.session_state["industry_edit_mode"] = True
-                    st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+        with ok_c:
+            conf_pct = int(detection_confidence * 100)
+            conf_str = f" ({conf_pct}%)" if conf_pct > 0 else ""
+            st.markdown(f"<div style='margin-top:28px;color:#7c3aed;font-size:12px'>{conf_str}</div>", unsafe_allow_html=True)
+            if st.button("✓", key="confirm_industry"):
+                st.session_state["industry_override"] = new_industry_sel
+                st.rerun()
 
     with col_print:
         new_print_method = st.selectbox(
