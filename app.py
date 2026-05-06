@@ -133,7 +133,7 @@ if has_stored_results:
     last_run_industry = st.session_state.get("last_run_industry", effective_industry)
     last_run_print = st.session_state.get("last_run_print", ctx_stored.print_method)
 
-    col_fmt, col_ind, col_print, col_file, col_btn = st.columns([2, 2, 2, 2, 1])
+    col_fmt, col_ind, col_print, col_file = st.columns([2, 3, 2, 3])
 
     with col_fmt:
         new_format_name = st.selectbox(
@@ -149,16 +149,21 @@ if has_stored_results:
 
     with col_ind:
         if st.session_state.get("industry_edit_mode"):
-            new_industry_sel = st.selectbox(
-                "Industrie",
-                options=INDUSTRY_NAMES,
-                index=INDUSTRY_NAMES.index(effective_industry) if effective_industry in INDUSTRY_NAMES else 0,
-                key="ctrl_industry_override",
-            )
-            if st.button("✓", key="confirm_industry"):
-                st.session_state["industry_override"] = new_industry_sel
-                st.session_state["industry_edit_mode"] = False
-                st.rerun()
+            sel_c, ok_c = st.columns([4, 1])
+            with sel_c:
+                new_industry_sel = st.selectbox(
+                    "Industrie",
+                    options=INDUSTRY_NAMES,
+                    index=INDUSTRY_NAMES.index(effective_industry) if effective_industry in INDUSTRY_NAMES else 0,
+                    key="ctrl_industry_override",
+                )
+            with ok_c:
+                st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+                if st.button("✓", key="confirm_industry"):
+                    st.session_state["industry_override"] = new_industry_sel
+                    st.session_state["industry_edit_mode"] = False
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
         else:
             conf_pct = int(detection_confidence * 100)
             is_auto = industry_override is None
@@ -172,19 +177,24 @@ if has_stored_results:
                 f"<span style='background:#ddd6fe;color:#5b21b6;font-size:10px;"
                 f"font-weight:600;padding:2px 6px;border-radius:4px;margin-left:4px'>MODIFIÉ</span>"
             )
-            st.markdown(
-                f"<div style='margin-top:4px'>"
-                f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
-                f"letter-spacing:0.05em;margin-bottom:4px'>Industrie</div>"
-                f"<div style='display:inline-flex;align-items:center;background:#ede9fe;"
-                f"border:1px solid #c4b5fd;border-radius:7px;padding:5px 11px;font-size:12px;"
-                f"font-weight:500;color:#5b21b6'>{badge_label}{auto_tag}</div>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-            if st.button("modifier", key="edit_industry"):
-                st.session_state["industry_edit_mode"] = True
-                st.rerun()
+            badge_c, pen_c = st.columns([5, 1])
+            with badge_c:
+                st.markdown(
+                    f"<div style='margin-top:4px'>"
+                    f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
+                    f"letter-spacing:0.05em;margin-bottom:4px'>Industrie</div>"
+                    f"<div style='display:inline-flex;align-items:center;background:#ede9fe;"
+                    f"border:1px solid #c4b5fd;border-radius:7px;padding:5px 11px;font-size:12px;"
+                    f"font-weight:500;color:#5b21b6'>{badge_label}{auto_tag}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            with pen_c:
+                st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+                if st.button("✏", key="edit_industry", help="Modifier l'industrie"):
+                    st.session_state["industry_edit_mode"] = True
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
     with col_print:
         new_print_method = st.selectbox(
@@ -194,30 +204,40 @@ if has_stored_results:
             key="ctrl_print",
         )
 
+    params_changed = (
+        new_format_name != last_run_format
+        or effective_industry != last_run_industry
+        or new_print_method != last_run_print
+    )
+
     with col_file:
         doc_name_stored = st.session_state.get("doc_name", "")
-        st.markdown(
-            f"<div style='margin-top:4px'>"
-            f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
-            f"letter-spacing:0.05em;margin-bottom:4px'>Fichier</div>"
-            f"<div style='display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;"
-            f"border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:12px;"
-            f"color:#475569'>{_lucide_icon('file_text', 13)} {escape(doc_name_stored)}</div>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
+        fname_c, btn_c = st.columns([3, 2])
+        with fname_c:
+            st.markdown(
+                f"<div style='margin-top:4px'>"
+                f"<div style='font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;"
+                f"letter-spacing:0.05em;margin-bottom:4px'>Fichier</div>"
+                f"<div style='display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;"
+                f"border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:12px;"
+                f"color:#475569;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>"
+                f"{_lucide_icon('file_text', 13)} {escape(doc_name_stored)}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        with btn_c:
+            st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+            ba, bb = st.columns(2)
+            with ba:
+                reanalyze = st.button("↺", key="reanalyze", disabled=not params_changed, help="Re-analyser avec ces paramètres", use_container_width=True)
+            with bb:
+                new_file = st.button("+", key="new_file", help="Analyser un autre fichier", use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    with col_btn:
-        params_changed = (
-            new_format_name != last_run_format
-            or effective_industry != last_run_industry
-            or new_print_method != last_run_print
-        )
-        st.markdown("<div style='margin-top:20px'>", unsafe_allow_html=True)
-        reanalyze = st.button("↺", key="reanalyze", disabled=not params_changed, help="Re-analyser avec ces paramètres")
-        st.markdown("</div>", unsafe_allow_html=True)
+    if new_file:
+        st.session_state.clear()
+        st.rerun()
 
-    # Handle re-analysis
     if reanalyze:
         files = [UploadedFile(name=n, data=d) for n, d in st.session_state["doc_data"]]
         try:
@@ -251,6 +271,10 @@ if has_stored_results:
     print_method = new_print_method
     format_name = new_format_name
 
+    uploaded = None
+    run_button = False
+    st.markdown("<hr style='margin:12px 0 4px;border:none;border-top:1px solid #f1f5f9'>", unsafe_allow_html=True)
+
 else:
     col_fmt, col_print = st.columns([2, 3])
     with col_fmt:
@@ -268,18 +292,18 @@ else:
         )
     st.caption("✦ L'industrie sera détectée automatiquement d'après le contenu du document.")
 
-uploaded = st.file_uploader(
-    "PDF (1-2 pages) ou 1-2 images PNG/JPEG",
-    type=["pdf", "png", "jpg", "jpeg"],
-    accept_multiple_files=True,
-    label_visibility="collapsed",
-)
+    uploaded = st.file_uploader(
+        "PDF (1-2 pages) ou 1-2 images PNG/JPEG",
+        type=["pdf", "png", "jpg", "jpeg"],
+        accept_multiple_files=True,
+        label_visibility="collapsed",
+    )
 
-run_button = st.button(
-    "Lancer la vérification",
-    type="primary",
-    disabled=not uploaded,
-)
+    run_button = st.button(
+        "Lancer la vérification",
+        type="primary",
+        disabled=not uploaded,
+    )
 
 # ---------- Helpers -----------------------------------------------------------
 
@@ -396,8 +420,8 @@ def _display_analysis_results(document, results, context, extraction_info, doc_n
         for page in document.pages:
             st.caption(f"Page {page.index + 1} — {page.source.upper()}")
             try:
-                preview = page.render(dpi=72) if page.source == "pdf" else page.render()
-                st.image(preview, use_container_width=True)
+                preview = page.render(dpi=150)
+                st.image(preview, width=180)
                 if st.button("Agrandir", key=f"view_page_{page.index}"):
                     st.session_state[f"show_page_{page.index}"] = True
             except Exception as exc:
@@ -436,8 +460,9 @@ def _display_analysis_results(document, results, context, extraction_info, doc_n
                     else:
                         st.caption("(aucun texte détecté)")
                 st.markdown("---")
-                st.markdown("**Texte complet concaténé:**")
-                st.code(extraction_info.text_used[:3000] + ("..." if len(extraction_info.text_used) > 3000 else ""), language=None)
+                # Show full text (may be large for multi-page documents)
+                st.markdown(f"**Texte complet ({len(extraction_info.text_used)} caractères):**")
+                st.code(extraction_info.text_used + ("..." if len(extraction_info.text_used) > 10000 else ""), language=None)
 
     with col_right:
         # --- Verdict banner ---
@@ -523,7 +548,7 @@ if run_button and uploaded:
     st.session_state["last_run_format"] = format_name
     st.session_state["last_run_industry"] = extraction_info.detected_industry
     st.session_state["last_run_print"] = print_method
-    display_results = True
+    st.rerun()
 
 elif has_stored_results and has_doc_data:
     # Restore from session state instead of using depleted uploaded files

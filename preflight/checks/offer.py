@@ -19,12 +19,13 @@ from preflight.text_normalize import normalize
 # Matches dates preceded by expiry keywords. Handles:
 #   numeric: 31/12/2026  31-12-2026  31.12.2026
 #   text:    31 decembre 2026  1er janvier 2026
+# For date ranges ("du X au Y"), capture the end date (after "au").
 EXPIRY_DATE_RE = re.compile(
-    r"(?:jusqu'au|valable|offre)\s+(?:jusqu'au\s+)?"
-    r"("
+    r"(?:jusqu'au|valable|offre)\s*[^.!?\n]{0,80}?"
+    r"(?:"
     r"\d{1,2}[/\-\.]\d{1,2}[/\-\.](?:\d{4}|\d{2})"
     r"|\d{1,2}(?:er)?\s+"
-    r"(?:janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)"
+    r"(?:janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|novembre|decembre)"
     r"\.?\s+\d{4}"
     r")",
     re.IGNORECASE,
@@ -49,19 +50,32 @@ def check_offer(all_text: str) -> list[CheckResult]:
     results: list[CheckResult] = []
     norm = normalize(all_text)
 
-    # Expiry dates
-    date_matches = list(EXPIRY_DATE_RE.finditer(norm))
-    if date_matches:
-        dates = list(dict.fromkeys(m.group(1) for m in date_matches))
-        for d in dates:
-            results.append(
-                CheckResult(
-                    check_name="offer",
-                    severity=Severity.INFO,
-                    message=f"Date de fin d'offre détectée : {d}.",
-                    details={"date": d},
-                )
+    # Find ALL date-like patterns in text
+    DATE_NUMERIC_RE = re.compile(
+        r"\d{1,2}[/\-\.]\d{1,2}[/\-\.](?:\d{4}|\d{2})",
+        re.IGNORECASE,
+    )
+    DATE_TEXT_RE = re.compile(
+        r"\d{1,2}(?:er)?\s+(?:janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|novembre|decembre)\.?\s+\d{4}",
+        re.IGNORECASE,
+    )
+
+    # Collect all unique dates near expiry keywords
+    numeric_dates = DATE_NUMERIC_RE.findall(norm)
+    text_dates = DATE_TEXT_RE.findall(norm)
+
+    if numeric_dates or text_dates:
+        dates = list(dict.fromkeys(numeric_dates + text_dates))
+        # For date ranges, report the last date as end date
+        end_date = dates[-1] if len(dates) > 1 else dates[0]
+        results.append(
+            CheckResult(
+                check_name="offer",
+                severity=Severity.INFO,
+                message=f"Date de fin d'offre détectée : {end_date}.",
+                details={"date": end_date},
             )
+        )
     else:
         results.append(
             CheckResult(
