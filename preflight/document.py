@@ -161,6 +161,8 @@ class PdfPage(Page):
             dist_r = (trim.x1 - block_rect.x1) * MM_PER_PT
             dist_b = (trim.y1 - block_rect.y1) * MM_PER_PT
             positive = [d for d in [dist_l, dist_t, dist_r, dist_b] if d >= 0]
+            # positive is always non-empty here: the earlier intersects() check ensures the
+            # block overlaps the TrimBox, so at least one edge distance is non-negative.
             min_dist = round(min(positive), 1) if positive else 0.0
             violations.append({
                 "text": text.strip()[:50].replace("\n", " "),

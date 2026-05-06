@@ -31,8 +31,7 @@ def check_image_resolution(document: Document) -> list[CheckResult]:
                     float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
                 )
             else:
-                page_width_pt = page_obj.rect.width
-                dpi = (img_width_px / page_width_pt) * 72.0 if page_width_pt > 0 else 0.0
+                dpi = 0.0
                 bbox_tuple = None
             dpi_list.append((dpi, bbox_tuple))
 

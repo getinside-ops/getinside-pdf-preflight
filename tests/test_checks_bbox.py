@@ -87,3 +87,25 @@ def test_high_res_pdf_no_images_has_no_bbox():
     document = Document.from_upload([f])
     results = check_image_resolution(document)
     assert all(r.bbox is None for r in results)
+
+
+def test_high_res_image_info_result_has_no_bbox():
+    """A page with a genuinely high-res image: INFO result should have bbox=None."""
+    from PIL import Image as PILImage
+    doc = fitz.open()
+    page = doc.new_page(width=A5_W_PT, height=A5_H_PT)
+    # 500×500 px image placed at 50×50 pt → DPI ≈ (500/50)*72 = 720 DPI → INFO
+    img = PILImage.new("RGB", (500, 500), color="blue")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    page.insert_image(fitz.Rect(50, 50, 100, 100), stream=buf.getvalue())
+    out = io.BytesIO()
+    doc.save(out)
+    f = UploadedFile(name="highres.pdf", data=out.getvalue())
+    document = Document.from_upload([f])
+    results = check_image_resolution(document)
+    info_results = [r for r in results if r.severity is Severity.INFO]
+    assert info_results, "high-DPI image should produce an INFO result"
+    assert all(r.bbox is None for r in info_results), (
+        "INFO results should not carry bbox (nothing to highlight)"
+    )
