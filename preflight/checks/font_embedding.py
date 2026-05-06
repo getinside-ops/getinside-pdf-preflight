@@ -30,17 +30,20 @@ def check_font_embedding(document: Document, snapshot: DocumentSnapshot) -> list
     try:
         for page in document.pages:
             for font_info in snapshot.page_fonts.get(page.index, []):
-                # font_info[0] = path/subset, font_info[1] = name
-                font_name = font_info[1] if len(font_info) > 1 else ""
-                font_subset = font_info[0] if len(font_info) > 0 else ""
+                # get_fonts(full=True) → (xref, ext, type, basefont, name, encoding, referencer)
+                font_name = font_info[3] if len(font_info) > 3 else ""  # basefont
 
                 if not font_name:
                     continue
 
-                # Check if it's a subset (starts with 6 uppercase letters)
-                is_subset = len(font_name) > 6 and font_name[:6].isupper() and font_name[6] == "+"
+                # Subset fonts have a 6-uppercase-letter prefix followed by '+'
+                is_subset = (
+                    len(font_name) > 7
+                    and font_name[:6].isupper()
+                    and font_name[6] == "+"
+                )
 
-                # Check for unembedded standard fonts
+                # Strip subset prefix and variant suffix to get the base family name
                 base_name = font_name.split("+")[-1].split("-")[0] if "+" in font_name else font_name
 
                 if base_name in _STANDARD_FONTS and not is_subset:

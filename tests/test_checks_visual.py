@@ -12,6 +12,7 @@ from PIL import Image
 from preflight.checks import Severity
 from preflight.checks.colorspace import check_colorspace
 from preflight.checks.dimensions import check_dimensions
+from preflight.checks.font_embedding import check_font_embedding
 from preflight.checks.qrcode import check_qr
 from preflight.document import Document, UploadedFile
 from preflight.formats import custom_format, get_format
@@ -150,3 +151,50 @@ def test_qr_too_small():
     snap = DocumentSnapshot.build(doc)
     results = check_qr(doc, snap)
     assert any("trop petit" in r.message for r in results)
+
+
+# --- Font embedding -----------------------------------------------------------
+
+
+def test_font_embedding_helvetica_warning(pdf_a5_single):
+    """Helvetica (helv) is a standard unembedded PDF font → must emit a WARNING."""
+    doc = Document.from_upload([pdf_a5_single])
+    snap = DocumentSnapshot.build(doc)
+    results = check_font_embedding(doc, snap)
+    warnings = [r for r in results if r.severity is Severity.WARNING]
+    assert warnings, "Expected at least one WARNING for unembedded Helvetica"
+    assert any("Helvetica" in r.message for r in warnings)
+
+
+def test_font_embedding_image_skipped(png_a5_300dpi):
+    """Font embedding check is a no-op for image documents."""
+    doc = Document.from_upload([png_a5_300dpi])
+    snap = DocumentSnapshot.build(doc)
+    results = check_font_embedding(doc, snap)
+    assert results == []
+
+
+def test_font_embedding_subset_not_flagged():
+    """A font with a subset prefix (ABCDEF+FontName) must not be flagged."""
+    import io
+
+    import fitz
+
+    doc_fitz = fitz.open()
+    page = doc_fitz.new_page(width=A5_W_PT, height=A5_H_PT)
+    # Insert text with a TrueType font so PyMuPDF embeds it with a subset prefix
+    page.insert_text((40, 60), "Hello subset", fontname="helv", fontsize=10)
+    # Manually patch the font list in the snapshot to simulate a subset-prefixed name
+    out = io.BytesIO()
+    doc_fitz.save(out)
+    uploaded = UploadedFile(name="subset.pdf", data=out.getvalue())
+    doc = Document.from_upload([uploaded])
+    snap = DocumentSnapshot.build(doc)
+
+    # Override page_fonts to inject a subset-named font entry
+    # Tuple layout: (xref, ext, type, basefont, name, encoding, referencer)
+    snap.page_fonts[0] = [(5, "ttf", "TrueType", "ABCDEF+Helvetica", "helv", "", 0)]
+
+    results = check_font_embedding(doc, snap)
+    # ABCDEF+Helvetica is a properly embedded subset — must not trigger a warning
+    assert not any(r.severity is Severity.WARNING for r in results)
