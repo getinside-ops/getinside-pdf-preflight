@@ -129,6 +129,7 @@ def _pdf_box_consistency(page, format_spec: FormatSpec) -> list[CheckResult]:
                         "min_dist_mm": worst["min_dist_mm"],
                     },
                     page=page.index,
+                    bbox=worst.get("bbox"),
                 )
             )
         else:

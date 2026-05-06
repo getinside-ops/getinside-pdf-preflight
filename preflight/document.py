@@ -165,6 +165,7 @@ class PdfPage(Page):
             violations.append({
                 "text": text.strip()[:50].replace("\n", " "),
                 "min_dist_mm": min_dist,
+                "bbox": (block_rect.x0, block_rect.y0, block_rect.x1, block_rect.y1),
             })
         return violations
 

@@ -18,6 +18,7 @@ class CheckResult:
     message: str
     details: dict[str, Any] = field(default_factory=dict)
     page: int | None = None
+    bbox: tuple[float, float, float, float] | None = None
 
     @property
     def is_error(self) -> bool:
