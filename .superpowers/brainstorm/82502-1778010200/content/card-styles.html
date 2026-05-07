@@ -1,0 +1,96 @@
+<h2>Check card styles — pick your favourite</h2>
+<p class="subtitle">Same three cards (error · warning · ok) in four different treatments</p>
+
+<style>
+* { box-sizing: border-box; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; }
+.group { }
+.group-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 8px; }
+.cards-stack { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── A: Coloured background fill ── */
+.card-fill-error  { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 10px 13px; }
+.card-fill-warn   { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 13px; }
+.card-fill-ok     { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 13px; }
+
+/* ── B: Icon badge ── */
+.card-icon { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 13px; display: flex; gap: 10px; align-items: flex-start; }
+.icon-dot-error  { width: 22px; height: 22px; border-radius: 6px; background: #fef2f2; border: 1.5px solid #fca5a5; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; color: #dc2626; }
+.icon-dot-warn   { width: 22px; height: 22px; border-radius: 6px; background: #fffbeb; border: 1.5px solid #fcd34d; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; color: #d97706; }
+.icon-dot-ok     { width: 22px; height: 22px; border-radius: 6px; background: #f0fdf4; border: 1.5px solid #86efac; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; color: #16a34a; }
+
+/* ── C: Top border only ── */
+.card-top-error { background: #fff; border: 1px solid #e2e8f0; border-top: 3px solid #ef4444; border-radius: 8px; padding: 10px 13px; }
+.card-top-warn  { background: #fff; border: 1px solid #e2e8f0; border-top: 3px solid #f59e0b; border-radius: 8px; padding: 10px 13px; }
+.card-top-ok    { background: #fff; border: 1px solid #e2e8f0; border-top: 3px solid #22c55e; border-radius: 8px; padding: 10px 13px; }
+
+/* ── D: Status pill ── */
+.card-pill { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.pill-error { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+.pill-warn  { background: #fffbeb; color: #d97706; border: 1px solid #fcd34d; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+.pill-ok    { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+
+/* ── shared text ── */
+.cn { font-size: 12px; font-weight: 600; color: #1e293b; margin-bottom: 2px; }
+.cm { font-size: 11px; color: #64748b; line-height: 1.4; }
+</style>
+
+<div class="grid">
+
+  <!-- A -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)" style="padding:14px;">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Tinted fill</h3>
+      <p>Each card gets a coloured background matching its severity — immediately scannable, no borders needed.</p>
+      <div class="cards-stack" style="margin-top:10px;">
+        <div class="card-fill-error"><div class="cn">Imprimeur</div><div class="cm">Mention imprimeur introuvable dans le document</div></div>
+        <div class="card-fill-warn"><div class="cn">Contraste</div><div class="cm">Page 2 : 5 zones à faible contraste (seuil 12:1)</div></div>
+        <div class="card-fill-ok"><div class="cn">Réglementaire</div><div class="cm">Alcool — aucune mention sectorielle manquante</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)" style="padding:14px;">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Coloured square icon</h3>
+      <p>White cards, neutral border everywhere. A small coloured icon square carries all the severity signal.</p>
+      <div class="cards-stack" style="margin-top:10px;">
+        <div class="card-icon"><div class="icon-dot-error">✕</div><div><div class="cn">Imprimeur</div><div class="cm">Mention imprimeur introuvable dans le document</div></div></div>
+        <div class="card-icon"><div class="icon-dot-warn">!</div><div><div class="cn">Contraste</div><div class="cm">Page 2 : 5 zones à faible contraste (seuil 12:1)</div></div></div>
+        <div class="card-icon"><div class="icon-dot-ok">✓</div><div><div class="cn">Réglementaire</div><div class="cm">Alcool — aucune mention sectorielle manquante</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)" style="padding:14px;">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Top border</h3>
+      <p>White cards with a single thick coloured stripe along the top. Same idea as the current left border, different axis.</p>
+      <div class="cards-stack" style="margin-top:10px;">
+        <div class="card-top-error"><div class="cn">Imprimeur</div><div class="cm">Mention imprimeur introuvable dans le document</div></div>
+        <div class="card-top-warn"><div class="cn">Contraste</div><div class="cm">Page 2 : 5 zones à faible contraste (seuil 12:1)</div></div>
+        <div class="card-top-ok"><div class="cn">Réglementaire</div><div class="cm">Alcool — aucune mention sectorielle manquante</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div class="option" data-choice="d" onclick="toggleSelect(this)" style="padding:14px;">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Status pill</h3>
+      <p>White cards with a coloured pill badge on the right — severity label is explicit, cards stay visually quiet.</p>
+      <div class="cards-stack" style="margin-top:10px;">
+        <div class="card-pill"><div><div class="cn">Imprimeur</div><div class="cm">Mention imprimeur introuvable dans le document</div></div><span class="pill-error">Erreur</span></div>
+        <div class="card-pill"><div><div class="cn">Contraste</div><div class="cm">Page 2 : 5 zones à faible contraste (seuil 12:1)</div></div><span class="pill-warn">Attention</span></div>
+        <div class="card-pill"><div><div class="cn">Réglementaire</div><div class="cm">Alcool — aucune mention sectorielle manquante</div></div><span class="pill-ok">OK</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>

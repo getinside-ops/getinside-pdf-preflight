@@ -1,0 +1,96 @@
+<h2>Industry detection — which approach?</h2>
+<p class="subtitle">How should the tool handle industry once we can auto-detect it?</p>
+
+<style>
+.mock { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; font-family: system-ui, sans-serif; font-size: 13px; margin-top: 12px; }
+.mock-toolbar { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mock-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 2px; }
+.mock-select { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 10px; font-size: 12px; color: #1e293b; }
+.mock-badge { display: inline-flex; align-items: center; gap: 5px; background: #ede9fe; border: 1px solid #a78bfa; color: #5b21b6; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 500; }
+.mock-badge-good { background: #dcfce7; border-color: #86efac; color: #166534; }
+.mock-badge-warn { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.mock-override { font-size: 11px; color: #6366f1; text-decoration: underline; cursor: pointer; margin-left: 4px; }
+.mock-body { padding: 14px; background: #fff; }
+.mock-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.mock-icon { width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
+.icon-detect { background: #ede9fe; color: #7c3aed; font-weight: bold; }
+.confidence { font-size: 11px; color: #94a3b8; }
+.tag-auto { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.tag-manual { background: #fef9c3; border: 1px solid #fef08a; color: #854d0e; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+</style>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Silent auto-select — no user input</h3>
+      <p>Industry is detected and used automatically. The detected value shows in the results summary, but the user never has to think about it before running.</p>
+      <div class="mock">
+        <div class="mock-toolbar">
+          <span><span class="mock-label">Format</span> <span class="mock-select">A5</span></span>
+          <span><span class="mock-label">Impression</span> <span class="mock-select">Imprimé par getinside</span></span>
+          <!-- no industry field -->
+        </div>
+        <div class="mock-body">
+          <div class="mock-row">
+            <span class="mock-icon icon-detect">✦</span>
+            <span style="color:#64748b;font-size:12px;">Industrie détectée automatiquement après analyse</span>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:10px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Zero friction — upload and go</li><li>Fewer fields = cleaner form</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>If detection is wrong, results are silently wrong</li><li>No override before analysis</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Auto-detect + visible override (recommended)</h3>
+      <p>After upload and analysis, the industry is auto-detected and shown as a badge in the results. The user can click to override if wrong — re-runs only the industry check instantly.</p>
+      <div class="mock">
+        <div class="mock-toolbar">
+          <span><span class="mock-label">Format</span> <span class="mock-select">A5</span></span>
+          <span>
+            <span class="mock-label">Industrie</span>
+            <span class="mock-badge mock-badge-good">✓ Alcool <span class="mock-override">modifier</span></span>
+          </span>
+          <span><span class="mock-label">Impression</span> <span class="mock-select">Imprimé par getinside</span></span>
+        </div>
+        <div class="mock-body" style="font-size:12px;color:#64748b;">
+          Détecté avec haute confiance · Phrase réglementaire alcool trouvée (similarité 94%)
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:10px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Transparent — user sees what was detected</li><li>Override is one click, no full reset</li><li>Confidence shown → trust signal</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Slightly more UI than option A</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Keep dropdown — pre-fill the detected value</h3>
+      <p>The industry dropdown stays exactly as-is, but it's pre-populated with the detected industry. User confirms or changes it before running analysis.</p>
+      <div class="mock">
+        <div class="mock-toolbar">
+          <span><span class="mock-label">Format</span> <span class="mock-select">A5</span></span>
+          <span>
+            <span class="mock-label">Industrie</span>
+            <span class="mock-select" style="border-color:#86efac;background:#f0fdf4;">Alcool <span class="tag-auto" style="margin-left:4px;">détecté</span></span>
+          </span>
+          <span><span class="mock-label">Impression</span> <span class="mock-select">Imprimé par getinside</span></span>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:10px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Minimal code change — just pre-fill</li><li>Familiar UX — same form as today</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Still requires user to read and confirm before running</li><li>Detection result only visible before analysis, not in results</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

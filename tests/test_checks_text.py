@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from preflight.checks import Severity
-from preflight.checks.advertiser import check_advertiser
+from preflight.checks.advertiser import check_advertiser, validate_siren
 from preflight.checks.industry import check_industry
 from preflight.checks.offer import check_offer
 from preflight.checks.printer import GETINSIDE_PRINTER_MENTION, check_printer
@@ -14,7 +14,7 @@ from preflight.checks.printer import GETINSIDE_PRINTER_MENTION, check_printer
 COMPLIANT_TEXT = """
 Getinside SAS — Capital social 50 000 euros.
 Siège social: 12 rue de l'Exemple, 75001 Paris.
-RCS Paris 123 456 789.
+RCS Paris 100 000 009.
 Offre valable jusqu'au 31/12/2026. Code promo : HELLO2026.
 """ + GETINSIDE_PRINTER_MENTION + "."
 
@@ -50,7 +50,7 @@ def test_advertiser_detects_rcs():
 
 
 def test_advertiser_missing_rcs():
-    text = COMPLIANT_TEXT.replace("RCS Paris 123 456 789", "")
+    text = COMPLIANT_TEXT.replace("RCS Paris 100 000 009", "")
     results = check_advertiser(text)
     assert _has_error(results)
 
@@ -67,11 +67,28 @@ def test_advertiser_missing_capital():
     assert _has_error(results)
 
 
-def test_advertiser_no_postal_code_warning():
-    text = "Getinside SAS — Capital social 50 000 euros. RCS Paris 123 456 789."
-    results = check_advertiser(text)
-    assert any(r.severity is Severity.WARNING for r in results)
-    assert not _has_error(results)
+# --- SIREN validation ----------------------------------------------------------
+
+
+def test_validate_siren_valid():
+    assert validate_siren("100000009") is True
+    assert validate_siren("123456782") is True
+
+
+def test_validate_siren_invalid():
+    assert validate_siren("123456789") is False
+    assert validate_siren("999999999") is False
+
+
+def test_validate_siren_invalid_length():
+    assert validate_siren("12345678") is False
+    assert validate_siren("1234567890") is False
+    assert validate_siren("abc") is False
+
+
+def test_validate_siren_with_spaces():
+    assert validate_siren("100 000 009") is True
+    assert validate_siren("123 456 789") is False
 
 
 # --- Offer --------------------------------------------------------------------

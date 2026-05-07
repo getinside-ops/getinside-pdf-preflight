@@ -23,6 +23,22 @@ RCS_RE = re.compile(
     re.IGNORECASE,
 )
 
+
+def _luhn_checksum(siren: str) -> int:
+    digits = [int(d) for d in siren]
+    for i in range(len(digits) - 2, -1, -2):
+        digits[i] *= 2
+        if digits[i] > 9:
+            digits[i] -= 9
+    return sum(digits) % 10
+
+
+def validate_siren(siren: str) -> bool:
+    siren = re.sub(r"\s+", "", siren)
+    if not siren.isdigit() or len(siren) != 9:
+        return False
+    return _luhn_checksum(siren) == 0
+
 # Longest alternatives first to avoid SAS matching inside SASU/SARL.
 LEGAL_FORM_RE = re.compile(
     r"\b(selarl|scop|sasu|sarl|eurl|snc|sci|sas|sa)\b",
@@ -101,14 +117,24 @@ def check_advertiser(all_text: str) -> list[CheckResult]:
         for m in rcs_matches:
             city = m.group(1).strip().title()
             siren = re.sub(r"\s+", "", m.group(2))
-            results.append(
-                CheckResult(
-                    check_name="advertiser",
-                    severity=Severity.INFO,
-                    message=f"RCS détecté : {city} {siren}.",
-                    details={"ville": city, "siren": siren},
+            if not validate_siren(siren):
+                results.append(
+                    CheckResult(
+                        check_name="advertiser",
+                        severity=Severity.WARNING,
+                        message=f"RCS détecté avec SIREN invalide : {city} {siren}.",
+                        details={"ville": city, "siren": siren},
+                    )
                 )
-            )
+            else:
+                results.append(
+                    CheckResult(
+                        check_name="advertiser",
+                        severity=Severity.INFO,
+                        message=f"RCS détecté : {city} {siren}.",
+                        details={"ville": city, "siren": siren},
+                    )
+                )
     else:
         results.append(
             CheckResult(
@@ -161,4 +187,4 @@ def check_advertiser(all_text: str) -> list[CheckResult]:
     return results
 
 
-__all__ = ["check_advertiser", "RCS_RE"]
+__all__ = ["check_advertiser", "RCS_RE", "validate_siren"]

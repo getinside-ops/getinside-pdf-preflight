@@ -1,0 +1,53 @@
+- generic [ref=e3]:
+  - banner [ref=e6]:
+    - generic [ref=e9]:
+      - button "Deploy" [ref=e11] [cursor=pointer]:
+        - generic [ref=e13]: Deploy
+      - button "Main menu" [ref=e15] [cursor=pointer]:
+        - img [ref=e16]
+  - generic [ref=e19]:
+    - generic [ref=e25]:
+      - img [ref=e27]
+      - text: Print Preflight — Getinside
+    - generic [ref=e32]:
+      - generic [ref=e36]:
+        - paragraph [ref=e40]: Format
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: A5
+            - combobox "Selected A5. Format" [ref=e46]
+          - img "open" [ref=e48]
+      - generic [ref=e53]:
+        - paragraph [ref=e57]: Impression
+        - radiogroup "Impression" [ref=e58] [cursor=pointer]:
+          - generic [ref=e59]:
+            - radio "Imprimé par getinside" [checked]
+            - paragraph [ref=e64]: Imprimé par getinside
+          - generic [ref=e65]:
+            - radio "Imprimé par la marque"
+            - paragraph [ref=e70]: Imprimé par la marque
+    - paragraph [ref=e75]: ✦ L'industrie sera détectée automatiquement d'après le contenu du document.
+    - region "PDF (1-2 pages) ou 1-2 images PNG/JPEG" [ref=e78] [cursor=pointer]:
+      - button "Choose File" [ref=e79]
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - generic "test-preflight.pdf, 5.4KB" [ref=e107]:
+            - img [ref=e109]
+            - generic [ref=e113]:
+              - generic "test-preflight.pdf" [ref=e114]
+              - generic [ref=e115]: 5.4KB
+            - button "Remove test-preflight.pdf" [ref=e117]:
+              - img [ref=e118]
+          - generic "test-preflight.pdf, 1.3KB" [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e133]:
+              - generic "test-preflight.pdf" [ref=e134]
+              - generic [ref=e135]: 1.3KB
+            - button "Remove test-preflight.pdf" [ref=e137]:
+              - img [ref=e138]
+        - button "Add files" [ref=e121]:
+          - generic [ref=e125]: add
+    - button "Lancer la vérification" [active] [ref=e93] [cursor=pointer]:
+      - paragraph [ref=e97]: Lancer la vérification
+    - alert [ref=e143]:
+      - paragraph [ref=e148]: Un seul fichier PDF est attendu.

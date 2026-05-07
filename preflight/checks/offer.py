@@ -11,9 +11,30 @@ WARNING (not an ERROR, since not all campaigns have a limited-time offer).
 from __future__ import annotations
 
 import re
+from datetime import datetime, date
+
+from dateutil import parser as date_parser
 
 from preflight.checks import CheckResult, Severity
 from preflight.text_normalize import normalize
+
+
+def parse_offer_date(date_str: str) -> datetime | None:
+    """Parse various date formats into datetime object."""
+    if not date_str:
+        return None
+    try:
+        if re.match(r"\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}", date_str):
+            return date_parser.parse(date_str, dayfirst=True)
+        return date_parser.parse(date_str, dayfirst=True)
+    except (ValueError, TypeError):
+        return None
+
+
+def validate_not_past(dt: datetime) -> bool:
+    """Check if date is not in the past (allows today)."""
+    today = date.today()
+    return dt.date() >= today
 
 # Run on normalized (accent-stripped, lowercase) text.
 # Matches dates preceded by expiry keywords. Handles:
@@ -66,16 +87,27 @@ def check_offer(all_text: str) -> list[CheckResult]:
 
     if numeric_dates or text_dates:
         dates = list(dict.fromkeys(numeric_dates + text_dates))
-        # For date ranges, report the last date as end date
         end_date = dates[-1] if len(dates) > 1 else dates[0]
-        results.append(
-            CheckResult(
-                check_name="offer",
-                severity=Severity.INFO,
-                message=f"Date de fin d'offre détectée : {end_date}.",
-                details={"date": end_date},
+        parsed_dt = parse_offer_date(end_date)
+
+        if parsed_dt and not validate_not_past(parsed_dt):
+            results.append(
+                CheckResult(
+                    check_name="offer",
+                    severity=Severity.WARNING,
+                    message=f"La date de fin d'offre ({end_date}) est dans le passé.",
+                    details={"date": end_date, "is_past": True},
+                )
             )
-        )
+        else:
+            results.append(
+                CheckResult(
+                    check_name="offer",
+                    severity=Severity.INFO,
+                    message=f"Date de fin d'offre détectée : {end_date}.",
+                    details={"date": end_date},
+                )
+            )
     else:
         results.append(
             CheckResult(

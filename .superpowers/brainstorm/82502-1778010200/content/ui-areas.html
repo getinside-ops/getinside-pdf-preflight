@@ -1,0 +1,93 @@
+<h2>Which areas need the most attention?</h2>
+<p class="subtitle">Select all that bother you in the current UI</p>
+
+<style>
+.area-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+.area-card { border: 2px solid #e2e8f0; border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.15s; background: #fff; }
+.area-card:hover { border-color: #6366f1; background: #f5f3ff; }
+.area-card.selected { border-color: #6366f1; background: #ede9fe; }
+.area-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; margin-bottom: 8px; }
+.tag-clutter { background: #fef3c7; color: #92400e; }
+.tag-info { background: #dbeafe; color: #1e40af; }
+.tag-flow { background: #dcfce7; color: #166534; }
+.tag-density { background: #fce7f3; color: #9d174d; }
+.area-title { font-size: 15px; font-weight: 600; color: #1e293b; margin: 0 0 6px; }
+.area-desc { font-size: 13px; color: #64748b; margin: 0; line-height: 1.5; }
+.before-after { display: flex; gap: 8px; margin-top: 10px; }
+.before { background: #fee2e2; color: #991b1b; font-size: 12px; padding: 4px 10px; border-radius: 6px; }
+.after { background: #d1fae5; color: #065f46; font-size: 12px; padding: 4px 10px; border-radius: 6px; }
+</style>
+
+<div class="area-grid">
+
+  <div class="area-card" data-choice="ocr-dump" onclick="toggleSelect(this)">
+    <span class="area-tag tag-clutter">Clutter</span>
+    <p class="area-title">Raw OCR text wall</p>
+    <p class="area-desc">The "Texte détecté par page" section dumps hundreds of lines of extracted text at the bottom — fine for debugging, overwhelming for end users.</p>
+    <div class="before-after">
+      <span class="before">Now: always visible, massive</span>
+      <span class="after">Fix: hidden by default</span>
+    </div>
+  </div>
+
+  <div class="area-card" data-choice="industry-select" onclick="toggleSelect(this)">
+    <span class="area-tag tag-flow">Flow</span>
+    <p class="area-title">Manual industry selection</p>
+    <p class="area-desc">User must pick the industry before seeing results. The document already contains strong signals (legal phrases, product names) to detect it automatically.</p>
+    <div class="before-after">
+      <span class="before">Now: mandatory dropdown</span>
+      <span class="after">Fix: auto-detected + override</span>
+    </div>
+  </div>
+
+  <div class="area-card" data-choice="metadata-table" onclick="toggleSelect(this)">
+    <span class="area-tag tag-info">Info</span>
+    <p class="area-title">Metadata &amp; OCR params panel</p>
+    <p class="area-desc">The left column mixes page thumbnails with a dense table (page type, QR URL, extraction method) and OCR settings (DPI, language, config). Hard to scan.</p>
+    <div class="before-after">
+      <span class="before">Now: always expanded</span>
+      <span class="after">Fix: collapsed accordion</span>
+    </div>
+  </div>
+
+  <div class="area-card" data-choice="check-density" onclick="toggleSelect(this)">
+    <span class="area-tag tag-density">Density</span>
+    <p class="area-title">Check card verbosity</p>
+    <p class="area-desc">Check cards on the right show a lot of technical detail (page numbers, dimensions, raw values). OK for developers, maybe too much for a compliance reviewer.</p>
+    <div class="before-after">
+      <span class="before">Now: full detail always shown</span>
+      <span class="after">Fix: summary + expand on click</span>
+    </div>
+  </div>
+
+  <div class="area-card" data-choice="thumbnail-size" onclick="toggleSelect(this)">
+    <span class="area-tag tag-info">Info</span>
+    <p class="area-title">Tiny page thumbnails</p>
+    <p class="area-desc">The page preview in the left column is small. For a visual print preflight tool, seeing the actual page at a readable size matters — especially for spotting layout issues.</p>
+    <div class="before-after">
+      <span class="before">Now: small fixed size</span>
+      <span class="after">Fix: larger preview pane</span>
+    </div>
+  </div>
+
+  <div class="area-card" data-choice="controls-after" onclick="toggleSelect(this)">
+    <span class="area-tag tag-flow">Flow</span>
+    <p class="area-title">Controls collapse to summary strip</p>
+    <p class="area-desc">After analysis, the format/industry/print controls collapse to a small summary. It's hard to see at a glance what was analyzed, and changing a setting requires a full reset.</p>
+    <div class="before-after">
+      <span class="before">Now: summary strip, edit = reset</span>
+      <span class="after">Fix: inline editable params</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" data-multiselect style="display:none"></div>
+<script>
+// Wire up area cards to the hidden options container for event tracking
+document.querySelectorAll('.area-card').forEach(card => {
+  card.addEventListener('click', function() {
+    this.classList.toggle('selected');
+  });
+});
+</script>
