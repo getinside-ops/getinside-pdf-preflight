@@ -51,7 +51,7 @@ def check_logos(
     # Render at 300 DPI so small logos (8-15 mm) have enough pixels for crops.
     aggregated: dict[str, int] = {}  # category -> best (lowest) distance
     for page in document.pages:
-        rendered = snapshot.page_renders[page.index]
+        rendered = snapshot.get_page_render(page.index)
         per_cat = library.all_distances(rendered)
         for cat, match in per_cat.items():
             if cat not in aggregated or match.distance < aggregated[cat]:

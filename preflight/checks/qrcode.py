@@ -26,7 +26,7 @@ def check_qr(document: Document, snapshot: DocumentSnapshot) -> list[CheckResult
 
     detections_per_page: list[tuple[int, list]] = []
     for page in document.pages:
-        image = snapshot.page_renders[page.index]
+        image = snapshot.get_page_render(page.index)
         dpi = float(SNAPSHOT_RENDER_DPI) if page.source == "pdf" else (page.dpi() or 72.0)
         detections_per_page.append((page.index, detect_qr_codes(image, dpi=dpi)))
 
