@@ -28,7 +28,7 @@ from PIL import Image
 
 from preflight.document import Document, Page
 
-OCR_DPI = 600
+OCR_DPI = 300  # Reduced from 600 - sufficient for most documents, 2x faster
 TEXT_LAYER_MIN_WORDS = 20
 TESSERACT_LANG = "fra"
 TESSERACT_CONFIG = "--psm 6"
