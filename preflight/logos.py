@@ -133,7 +133,7 @@ class LogoLibrary:
 
     def _scan(self, image: Image.Image) -> dict[str, LogoMatch]:
         """Compute the minimum phash distance per category over a multi-scale
-        crop sweep of ``image``."""
+        crop sweep of ``image``. Exits early if perfect match found."""
         best_per_cat: dict[str, LogoMatch] = {}
         for crop in _candidate_crops(image):
             crop_hash = imagehash.phash(crop)
@@ -146,6 +146,9 @@ class LogoLibrary:
                         variant=variant.name,
                         distance=distance,
                     )
+                # Early exit: perfect match found
+                if distance == 0:
+                    return best_per_cat
         return best_per_cat
 
     def best_match(
