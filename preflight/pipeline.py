@@ -10,7 +10,9 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace as dc_replace
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Callable, Literal, Optional
+
+ProgressCallback = Optional[Callable[[int, str], None]]
 
 from preflight.checks import CheckResult, Severity
 from preflight.checks.advertiser import check_advertiser
@@ -239,6 +241,113 @@ def run_all_checks_with_extraction(
     return results, extraction_info
 
 
+def run_all_checks_with_progress(
+    document: Document,
+    context: CheckContext,
+    *,
+    logo_library: LogoLibrary | None = None,
+    progress_callback: ProgressCallback = None,
+) -> tuple[list[CheckResult], ExtractionInfo]:
+    """Run all checks with progress reporting.
+    
+    Args:
+        document: The document to check
+        context: Check context (format spec, industry, print method)
+        logo_library: Optional pre-loaded logo library
+        progress_callback: Optional callback(percent, status_text) for UI updates
+    
+    Returns:
+        Tuple of (list of CheckResults, ExtractionInfo)
+    """
+    total_steps = 16  # 11 visual + 4 text + 1 extraction
+    step = 0
+    
+    def _progress(name: str) -> None:
+        nonlocal step
+        step += 1
+        percent = int((step / total_steps) * 100)
+        if progress_callback:
+            progress_callback(percent, name)
+    
+    if logo_library is None:
+        logo_library = LogoLibrary(LOGO_LIBRARY_ROOT)
+
+    snapshot = DocumentSnapshot.build(document)
+
+    results: list[CheckResult] = []
+    
+    # Visual checks (11 steps)
+    _progress("Vérification des dimensions...")
+    results.extend(check_dimensions(document, context.format_spec))
+    
+    _progress("Vérification du fond perdu...")
+    results.extend(check_bleed(document))
+    
+    _progress("Vérification de l'espace colorimétrique...")
+    results.extend(check_colorspace(document))
+    
+    _progress("Vérification de la résolution des images...")
+    results.extend(check_image_resolution(document, snapshot))
+    
+    _progress("Vérification de la transparence...")
+    results.extend(check_transparency(document))
+    
+    _progress("Vérification du code QR...")
+    results.extend(check_qr(document, snapshot))
+    
+    _progress("Vérification des logos...")
+    results.extend(check_logos(document, logo_library, context.print_method, snapshot))
+    
+    _progress("Vérification des polices...")
+    results.extend(check_font_embedding(document, snapshot))
+    
+    _progress("Vérification des images liées...")
+    results.extend(check_linked_images(document))
+    
+    _progress("Vérification des couleurs spot...")
+    results.extend(check_spot_colors(document))
+    
+    _progress("Vérification des boîtes de page...")
+    results.extend(check_page_boxes(document))
+    
+    # Text extraction
+    _progress("Extraction du texte (OCR si nécessaire)...")
+    page_texts = extract_document_text(document)
+    document_text = " ".join(pt.text for pt in page_texts)
+    detected_industry, detection_confidence = detect_industry(document_text)
+    effective_industry = context.industry if context.industry else detected_industry
+    
+    # Text checks (4 steps)
+    _progress("Vérification de l'annonceur...")
+    results.extend(check_advertiser(document_text))
+    
+    _progress("Vérification de l'offre...")
+    results.extend(check_offer(document_text))
+    
+    _progress("Vérification de l'imprimeur...")
+    results.extend(check_printer(document_text, context.print_method))
+    
+    _progress("Vérification des mentions légales...")
+    results.extend(check_industry(document_text, effective_industry))
+
+    ocr_settings = OCR_SETTINGS
+    for pt in page_texts:
+        if pt.ocr_settings_used is not None:
+            ocr_settings = pt.ocr_settings_used
+            break
+
+    extraction_info = ExtractionInfo(
+        pages=page_texts,
+        ocr_settings=ocr_settings,
+        text_used=document_text,
+        detected_industry=detected_industry,
+        detection_confidence=detection_confidence,
+    )
+
+    results = _apply_severity_overrides(results, context.severity_overrides)
+    return results, extraction_info
+
+
 def summarize(results: list[CheckResult]) -> dict[str, int]:
     counts = {Severity.ERROR: 0, Severity.WARNING: 0, Severity.INFO: 0}
     for r in results:
@@ -264,5 +373,7 @@ __all__ = [
     "run_all_checks",
     "run_all_checks_parallel",
     "run_all_checks_with_extraction",
+    "run_all_checks_with_progress",
     "summarize",
+    "ProgressCallback",
 ]

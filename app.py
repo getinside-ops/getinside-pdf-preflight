@@ -15,6 +15,7 @@ from preflight.pipeline import (
     LOGO_LIBRARY_ROOT,
     overall_verdict,
     run_all_checks_with_extraction,
+    run_all_checks_with_progress,
     summarize,
 )
 
@@ -445,10 +446,21 @@ if run_button and uploaded:
 
     library = LogoLibrary(LOGO_LIBRARY_ROOT)
 
-    with st.spinner("Analyse en cours…"):
-        results, extraction_info = run_all_checks_with_extraction(
-            document, context, logo_library=library
-        )
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        progress_bar = st.progress(0, text="Initialisation...")
+        status_text = st.empty()
+
+    def update_progress(percent: int, status: str) -> None:
+        with col2:
+            progress_bar.progress(percent, text=status)
+
+    results, extraction_info = run_all_checks_with_progress(
+        document, context, logo_library=library, progress_callback=update_progress
+    )
+
+    progress_bar.empty()
+    status_text.empty()
 
     st.session_state["results"] = results
     st.session_state["extraction_info"] = extraction_info
