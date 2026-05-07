@@ -179,20 +179,40 @@ def get_industry(name: str) -> IndustryRule:
 
 
 def detect_industry(text: str) -> tuple[str, float]:
-    """Return (industry_name, confidence 0–1). Falls back to 'Général'."""
+    """Return (industry_name, confidence 0–1). Falls back to 'Général'.
+
+    Uses weighted keyword scoring where high-relevance keywords (like industry names)
+    get higher weights than generic ones.
+    """
     norm = normalize(text)
     best_name = "Général"
-    best_hits = 0
+    best_score = 0.0
+
+    KEYWORD_WEIGHTS = {
+        "alcool": 3.0, "alimentation": 3.0, "medicament": 3.0,
+        "automobile": 3.0, "assurance": 3.0, "jouet": 3.0,
+        "credit": 2.5, "pret": 2.5, "investissement": 2.5,
+        "whisky": 2.0, "champagne": 2.0, "vin": 1.5,
+        "voiture": 2.0, "vehicule": 2.0,
+        "produit": 0.5, "service": 0.5,
+    }
 
     for name, rule in INDUSTRIES.items():
         if name == "Général" or not rule.detection_keywords:
             continue
-        hits = sum(1 for kw in rule.detection_keywords if kw in norm)
-        if hits > best_hits:
-            best_hits = hits
+
+        score = 0.0
+        for kw in rule.detection_keywords:
+            if kw in norm:
+                weight = KEYWORD_WEIGHTS.get(kw, 1.0)
+                count = min(norm.count(kw), 3)
+                score += weight * (1.0 + 0.1 * (count - 1))
+
+        if score > best_score:
+            best_score = score
             best_name = name
 
-    confidence = min(best_hits / 3.0, 1.0)  # 3 keyword hits = full confidence
+    confidence = min(best_score / 5.0, 1.0)
     return best_name, confidence
 
 
