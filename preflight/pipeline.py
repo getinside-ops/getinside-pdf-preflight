@@ -7,9 +7,10 @@ them by severity for display.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace as dc_replace
 from pathlib import Path
-from typing import Literal
+from typing import Callable, Literal
 
 from preflight.checks import CheckResult, Severity
 from preflight.checks.advertiser import check_advertiser
@@ -109,6 +110,79 @@ def run_all_checks(
     return _apply_severity_overrides(results, context.severity_overrides)
 
 
+VISUAL_CHECKS: list[Callable] = [
+    check_dimensions,
+    check_bleed,
+    check_colorspace,
+    check_image_resolution,
+    check_transparency,
+    check_qr,
+    check_logos,
+    check_font_embedding,
+    check_linked_images,
+    check_spot_colors,
+    check_page_boxes,
+]
+
+TEXT_CHECKS: list[Callable] = [
+    check_advertiser,
+    check_offer,
+    check_printer,
+    check_industry,
+]
+
+
+def run_all_checks_parallel(
+    document: Document,
+    context: CheckContext,
+    *,
+    logo_library: LogoLibrary | None = None,
+) -> list[CheckResult]:
+    if logo_library is None:
+        logo_library = LogoLibrary(LOGO_LIBRARY_ROOT)
+
+    snapshot = DocumentSnapshot.build(document)
+
+    results: list[CheckResult] = []
+
+    def run_visual_check(check_fn: Callable) -> list[CheckResult]:
+        try:
+            if check_fn == check_image_resolution:
+                return check_fn(document, snapshot)
+            elif check_fn == check_logos:
+                return check_fn(document, logo_library, context.print_method, snapshot)
+            elif check_fn == check_font_embedding:
+                return check_fn(document, snapshot)
+            elif check_fn == check_dimensions:
+                return check_fn(document, context.format_spec)
+            else:
+                return check_fn(document)
+        except Exception as e:
+            return [
+                CheckResult(
+                    check_name=check_fn.__name__,
+                    severity=Severity.ERROR,
+                    message=str(e),
+                )
+            ]
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(run_visual_check, fn): fn for fn in VISUAL_CHECKS}
+        for future in as_completed(futures):
+            results.extend(future.result())
+
+    document_text = all_text(document)
+    detected, _ = detect_industry(document_text)
+    effective_industry = context.industry if context.industry else detected
+
+    results.extend(check_advertiser(document_text))
+    results.extend(check_offer(document_text))
+    results.extend(check_printer(document_text, context.print_method))
+    results.extend(check_industry(document_text, effective_industry))
+
+    return _apply_severity_overrides(results, context.severity_overrides)
+
+
 def run_all_checks_with_extraction(
     document: Document,
     context: CheckContext,
@@ -188,6 +262,7 @@ __all__ = [
     "PrintMethod",
     "overall_verdict",
     "run_all_checks",
+    "run_all_checks_parallel",
     "run_all_checks_with_extraction",
     "summarize",
 ]
